@@ -35,7 +35,7 @@ class GroupCreate(BaseModel):
 
 class GroupResponse(BaseModel):
     id: UUID
-    creator_id: UUID
+    creator_id: Optional[UUID] = None
     title: str
     description: Optional[str] = None
     timezone: str
@@ -52,7 +52,7 @@ class AvailabilityCreate(BaseModel):
 class AvailabilityResponse(BaseModel):
     id: UUID
     group_id: UUID
-    user_id: UUID
+    user_id: Optional[UUID] = None
     start_time: datetime
     end_time: datetime
 
