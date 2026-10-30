@@ -23,6 +23,7 @@ class GroupCreate(BaseModel):
     timezone: str
     grid_start_hour: time
     grid_end_hour: time
+    days: list[date]
 
     @field_validator('timezone')
     @classmethod
@@ -33,6 +34,15 @@ class GroupCreate(BaseModel):
             raise ValueError('Podano nieistniejącą strefe czasową')
         return v
 
+
+class GroupDayResponse(BaseModel):
+    id: UUID
+    group_id: UUID
+    date: date
+
+    class Config:
+        from_attributes = True
+
 class GroupResponse(BaseModel):
     id: UUID
     creator_id: Optional[UUID] = None
@@ -41,6 +51,7 @@ class GroupResponse(BaseModel):
     timezone: str
     grid_start_hour: time
     grid_end_hour: time
+    days: list[GroupDayResponse]
 
     class Config:
         from_attributes = True
@@ -62,13 +73,11 @@ class AvailabilityResponse(BaseModel):
 class GroupDayCreate(BaseModel):
     date: date
 
-class GroupDayResponse(BaseModel):
-    id: UUID
-    group_id: UUID
-    date: date
+class HeatmapResponse(BaseModel):
+    total_participants: int
+    heatmap: dict[datetime,int]
 
-    class Config:
-        from_attributes = True
+
 
 
 

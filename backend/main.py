@@ -25,46 +25,67 @@ def read_root():
 
 @app.post("/groups", response_model = schemas.GroupResponse)
 def create_group(group: schemas.GroupCreate, db: Session = Depends(get_db)):
-    db_group = models.Group(**group.model_dump())
+
+    group_data = group.model_dump()
+    days = group_data.pop("days",[])
+
+    db_group = models.Group(**group_data)
 
     db.add(db_group)
-    db.commit()
+    db.flush()
 
+    for day_date in days:
+        db_day = models.GroupDay(group_id = db_group.id, date=day_date)
+        db.add(db_day)
+
+    db.commit()
     db.refresh(db_group)
 
     return db_group
 
-@app.post("/groups/{group_id}/availabilities", response_model = schemas.AvailabilityResponse)
-def create_availability(availability: schemas.AvailabilityCreate,group_id: UUID, db: Session = Depends(get_db)):
+@app.post("/groups/{group_id}/availabilities", response_model = list[schemas.AvailabilityResponse])
+def create_availability(availabilities: list[schemas.AvailabilityCreate],group_id: UUID, db: Session = Depends(get_db)):
 
     group = db.query(models.Group).filter(models.Group.id == group_id).first()
     if not group:
         raise HTTPException(status_code=404, detail="Grupa nie istnieje")
 
-    if availability.start_time >= availability.end_time:
-        raise HTTPException(status_code=400, detail="Czas rozpoczęcia musi być przed czasem zakończenia")
+    db_availabilities = []
 
-    start_time_only = availability.start_time.time()
-    end_time_only = availability.end_time.time()
+    for av in availabilities:
+        if av.start_time >= av.end_time:
+            raise HTTPException(status_code=400, detail="Czas rozpoczęcia musi być przed czasem zakończenia")
 
-    if start_time_only < group.grid_start_hour or end_time_only > group.grid_end_hour:
-        raise HTTPException(
-            status_code=400, 
-            detail=f"Dostępność wykracza poza ramy czasowe grupy ({group.grid_start_hour} - {group.grid_end_hour})"
-        )
+        start_time_only = av.start_time.time()
+        end_time_only = av.end_time.time()
+
+        if start_time_only < group.grid_start_hour or end_time_only > group.grid_end_hour:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Dostępność wykracza poza ramy czasowe grupy ({group.grid_start_hour} - {group.grid_end_hour})"
+            )
     
-    db_availability = models.Availability(**availability.model_dump(), group_id=group_id)
-    db.add(db_availability)
+        db_availabilities.append(models.Availability(**av.model_dump(), group_id=group_id))
+    db.add_all(db_availabilities)
     db.commit()
 
-    db.refresh(db_availability)
+    for db_av in db_availabilities:
+        db.refresh(db_av)
 
-    return db_availability
+    return db_availabilities
 
-@app.get("/groups/{group_id}/heatmap", response_model = dict[datetime, int])
+@app.get("/groups/{group_id}/heatmap", response_model = schemas.HeatmapResponse)
 def get_heatmap(group_id: UUID, db: Session = Depends(get_db)):
     availabilities = db.query(models.Availability).filter(models.Availability.group_id == group_id).all()
-     
-    heatmap= calculate_overlaps(availabilities)
 
-    return heatmap
+    total_participants = db.query(models.Availability.user_id).filter(
+        models.Availability.group_id == group_id,
+        models.Availability.user_id.isnot(None)
+    ).distinct().count()
+     
+    heatmap_data= calculate_overlaps(availabilities)
+
+    return {
+        "total_participants": total_participants,
+        "heatmap": heatmap_data
+    }

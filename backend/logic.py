@@ -12,7 +12,7 @@ def partition(start,end,interval):
     return result
 
 
-def calculate_overlaps(availabilities, interval_minutes=15):
+def calculate_overlaps(availabilities, interval_minutes=30):
     heatmap = {}
 
     for avaliability in availabilities:
