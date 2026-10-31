@@ -320,11 +320,9 @@ export function SessionPage({
                               absolute inset-y-0 left-0 transition-all duration-300 ease-out
                               ${isFullMatch ? "bg-[#3b5278]" : "bg-white/15"}
                             `}
-                          />
-
-                          {isMine && (
-                            <div className="pointer-events-none absolute inset-0 border-2 border-white z-20" />
-                          )}
+                          >
+                            {isMine && <CheckIcon className="w-5 h-5" />}
+                          </div>
 
                           <span className="relative z-10 text-xs sm:text-sm font-mono font-bold text-white">
                             {count > 0 ? `${count}/${totalParticipants}` : ""}
