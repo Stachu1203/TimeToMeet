@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { formatShortDate, generateTimeLabels, makeSlotKey } from "../mockData";
 import type { GroupSession, User } from "../types";
 import {
@@ -57,6 +57,212 @@ const getColor = (userId: string) => {
   return palette[Math.abs(hash) % palette.length];
 };
 
+interface ScheduleCellProps {
+  slotKey: string;
+  dayDate: string;
+  timeStr: string;
+  isFullHour: boolean;
+  count: number;
+  totalParticipants: number;
+  isMine: boolean;
+  isFullMatch: boolean;
+  isHighlightedUserHere: boolean;
+  highlightedColor: string | undefined;
+  highlightedUserId: string | null;
+  isInspectedSlot: boolean;
+  onMouseDown: (slotKey: string) => void;
+  onMouseEnter: (slotKey: string, e: React.MouseEvent) => void;
+  onMouseMove: (e: React.MouseEvent) => void;
+}
+
+const ScheduleCell = React.memo(function ScheduleCell({
+  slotKey,
+  dayDate,
+  timeStr,
+  isFullHour,
+  count,
+  totalParticipants,
+  isMine,
+  isFullMatch,
+  isHighlightedUserHere,
+  highlightedColor,
+  highlightedUserId,
+  isInspectedSlot,
+  onMouseDown,
+  onMouseEnter,
+  onMouseMove,
+}: ScheduleCellProps) {
+  const fillPercent = count > 0 ? Math.round((count / totalParticipants) * 100) : 0;
+
+  return (
+    <td
+      className={`p-0 border border-white/10 ${
+        isFullHour ? "border-t-2 border-t-white/55" : ""
+      }`}
+    >
+      <div
+        role="button"
+        tabIndex={0}
+        aria-label={`${dayDate} ${timeStr}, ${count} of ${totalParticipants} available`}
+        onMouseDown={() => onMouseDown(slotKey)}
+        onMouseEnter={(e) => onMouseEnter(slotKey, e)}
+        onMouseMove={onMouseMove}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onMouseDown(slotKey);
+          }
+        }}
+        className={`relative overflow-hidden h-10 lg:h-11 xl:h-12 flex items-center justify-end px-3 text-sm transition-all duration-150 cursor-pointer bg-[#181a20] hover:bg-white/[0.04] ${
+          isInspectedSlot ? "ring-2 ring-inset ring-white z-20" : ""
+        }`}
+      >
+        <div
+          style={{
+            width: highlightedUserId
+              ? isHighlightedUserHere
+                ? "100%"
+                : "0%"
+              : `${fillPercent}%`,
+            backgroundColor:
+              highlightedUserId && isHighlightedUserHere
+                ? highlightedColor
+                : undefined,
+          }}
+          className={`absolute inset-y-0 left-0 transition-all duration-300 ease-out ${
+            highlightedUserId
+              ? ""
+              : isFullMatch
+                ? "bg-[#3b5278]"
+                : "bg-white/15"
+          }`}
+        >
+          {isMine && <CheckIcon className="w-5 h-5" />}
+        </div>
+      </div>
+    </td>
+  );
+});
+
+interface ScheduleTableProps {
+  session: GroupSession;
+  timeLabels: string[];
+  slotUsersMap: Record<string, User[]>;
+  totalParticipants: number;
+  mySlots: Set<string>;
+  highlightedUserId: string | null;
+  assignedColors: Map<string, string>;
+  selectedSlot: string | null;
+  scrollContainerRef: React.RefObject<HTMLDivElement | null>;
+  onCellMouseDown: (slotKey: string) => void;
+  onCellMouseEnter: (slotKey: string, e: React.MouseEvent) => void;
+  onCellMouseMove: (e: React.MouseEvent) => void;
+  onMouseLeave: () => void;
+}
+
+const ScheduleTable = React.memo(function ScheduleTable({
+  session,
+  timeLabels,
+  slotUsersMap,
+  totalParticipants,
+  mySlots,
+  highlightedUserId,
+  assignedColors,
+  selectedSlot,
+  scrollContainerRef,
+  onCellMouseDown,
+  onCellMouseEnter,
+  onCellMouseMove,
+  onMouseLeave,
+}: ScheduleTableProps) {
+  return (
+    <div
+      ref={scrollContainerRef}
+      className="w-full overflow-x-auto"
+      onMouseLeave={onMouseLeave}
+    >
+      <table
+        style={{
+          minWidth: `${Math.max(680, session.days.length * 110 + 80)}px`,
+        }}
+        className="w-full select-none border-collapse table-fixed"
+      >
+        <thead>
+          <tr>
+            <th className="sticky left-0 z-30 bg-[#121318] w-20 pb-3 pr-4 text-right text-sm font-mono font-bold text-white">
+              {session.timezone}
+            </th>
+            {session.days.map((day) => {
+              const { weekday, monthDay } = formatShortDate(day.date);
+              return (
+                <th
+                  key={day.id}
+                  className="pb-3 px-2 text-center border-b-2 border-white/50"
+                >
+                  <div className="text-base font-semibold text-white">
+                    {weekday}
+                  </div>
+                  <div className="text-sm font-medium text-white">
+                    {monthDay}
+                  </div>
+                </th>
+              );
+            })}
+          </tr>
+        </thead>
+        <tbody>
+          {timeLabels.map((timeStr) => {
+            const isFullHour = timeStr.endsWith(":00");
+            return (
+              <tr key={timeStr}>
+                <td className="sticky left-0 z-30 bg-[#121318] pr-4 text-right align-top -translate-y-2 text-sm text-white font-mono font-bold">
+                  {isFullHour ? timeStr : ""}
+                </td>
+                {session.days.map((day) => {
+                  const slotKey = makeSlotKey(day.date, timeStr);
+                  const availableUsers = slotUsersMap[slotKey] ?? [];
+                  const count = availableUsers.length;
+                  const isMine = mySlots.has(slotKey);
+                  const isFullMatch =
+                    count === totalParticipants && totalParticipants > 0;
+                  const isHighlightedUserHere = highlightedUserId
+                    ? availableUsers.some((u) => u.id === highlightedUserId)
+                    : false;
+                  const highlightedColor = highlightedUserId
+                    ? assignedColors.get(highlightedUserId)
+                    : undefined;
+                  const isInspectedSlot = selectedSlot === slotKey;
+
+                  return (
+                    <ScheduleCell
+                      key={slotKey}
+                      slotKey={slotKey}
+                      dayDate={day.date}
+                      timeStr={timeStr}
+                      isFullHour={isFullHour}
+                      count={count}
+                      totalParticipants={totalParticipants}
+                      isMine={isMine}
+                      isFullMatch={isFullMatch}
+                      isHighlightedUserHere={isHighlightedUserHere}
+                      highlightedColor={highlightedColor}
+                      highlightedUserId={highlightedUserId}
+                      isInspectedSlot={isInspectedSlot}
+                      onMouseDown={onCellMouseDown}
+                      onMouseEnter={onCellMouseEnter}
+                      onMouseMove={onCellMouseMove}
+                    />
+                  );
+                })}
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+});
+
 export function SessionPage({
   session,
   currentUser,
@@ -111,48 +317,61 @@ export function SessionPage({
     return () => window.removeEventListener("mouseup", handleMouseUp);
   }, []);
 
-  const updateSlotSelection = (nextSet: Set<string>, userOverride?: User) => {
-    const activeUser = userOverride ?? currentUser;
-    setMySlots(nextSet);
-    if (activeUser) {
-      onSaveUserSlots(session.id, activeUser, Array.from(nextSet).sort());
-    }
-  };
+  const updateSlotSelection = useCallback(
+    (nextSet: Set<string>, userOverride?: User) => {
+      const activeUser = userOverride ?? currentUser;
+      setMySlots(nextSet);
+      if (activeUser) {
+        onSaveUserSlots(session.id, activeUser, Array.from(nextSet).sort());
+      }
+    },
+    [currentUser, onSaveUserSlots, session.id],
+  );
 
-  const handleCellMouseDown = (slotKey: string) => {
-    if (gridMode === "inspect") {
-      setSelectedSlot((prev) => (prev === slotKey ? null : slotKey));
-      return;
-    }
-    if (!currentUser) {
-      setPendingSlotKey(slotKey);
-      setShowIdentityModal(true);
-      return;
-    }
-    const alreadySelected = mySlots.has(slotKey);
-    const mode = alreadySelected ? "remove" : "add";
-    setIsDragging(true);
-    setDragMode(mode);
+  const handleCellMouseDown = useCallback(
+    (slotKey: string) => {
+      if (gridMode === "inspect") {
+        setSelectedSlot((prev) => (prev === slotKey ? null : slotKey));
+        return;
+      }
+      if (!currentUser) {
+        setPendingSlotKey(slotKey);
+        setShowIdentityModal(true);
+        return;
+      }
+      const alreadySelected = mySlots.has(slotKey);
+      const mode = alreadySelected ? "remove" : "add";
+      setIsDragging(true);
+      setDragMode(mode);
 
-    const next = new Set(mySlots);
-    if (mode === "add") next.add(slotKey);
-    else next.delete(slotKey);
-    updateSlotSelection(next);
-  };
+      const next = new Set(mySlots);
+      if (mode === "add") next.add(slotKey);
+      else next.delete(slotKey);
+      updateSlotSelection(next);
+    },
+    [gridMode, currentUser, mySlots, updateSlotSelection],
+  );
 
-  const handleCellMouseEnter = (slotKey: string, e: React.MouseEvent) => {
-    setHoveredSlot(slotKey);
+  const handleCellMouseEnter = useCallback(
+    (slotKey: string, e: React.MouseEvent) => {
+      setHoveredSlot(slotKey);
+      setMousePos({ x: e.clientX, y: e.clientY });
+      if (gridMode === "inspect" || !isDragging || !currentUser) return;
+      const next = new Set(mySlots);
+      if (dragMode === "add") next.add(slotKey);
+      else next.delete(slotKey);
+      updateSlotSelection(next);
+    },
+    [gridMode, isDragging, currentUser, mySlots, dragMode, updateSlotSelection],
+  );
+
+  const handleCellMouseMove = useCallback((e: React.MouseEvent) => {
     setMousePos({ x: e.clientX, y: e.clientY });
-    if (gridMode === "inspect" || !isDragging || !currentUser) return;
-    const next = new Set(mySlots);
-    if (dragMode === "add") next.add(slotKey);
-    else next.delete(slotKey);
-    updateSlotSelection(next);
-  };
+  }, []);
 
-  const handleCellMouseMove = (e: React.MouseEvent) => {
-    setMousePos({ x: e.clientX, y: e.clientY });
-  };
+  const handleTableMouseLeave = useCallback(() => {
+    setHoveredSlot(null);
+  }, []);
 
   const handleClearMine = () => {
     if (!currentUser) return;
@@ -368,128 +587,21 @@ export function SessionPage({
         </div>
       )}
 
-      <div
-        ref={scrollContainerRef}
-        className="w-full overflow-x-auto"
-        onMouseLeave={() => setHoveredSlot(null)}
-      >
-        <table
-          style={{
-            minWidth: `${Math.max(680, session.days.length * 110 + 80)}px`,
-          }}
-          className="w-full select-none border-collapse table-fixed"
-        >
-          <thead>
-            <tr>
-              <th className="sticky left-0 z-30 bg-[#121318] w-20 pb-3 pr-4 text-right text-sm font-mono font-bold text-white">
-                {session.timezone}
-              </th>
-              {session.days.map((day) => {
-                const { weekday, monthDay } = formatShortDate(day.date);
-                return (
-                  <th
-                    key={day.id}
-                    className="pb-3 px-2 text-center border-b-2 border-white/50"
-                  >
-                    <div className="text-base font-semibold text-white">
-                      {weekday}
-                    </div>
-                    <div className="text-sm font-medium text-white">
-                      {monthDay}
-                    </div>
-                  </th>
-                );
-              })}
-            </tr>
-          </thead>
-          <tbody>
-            {timeLabels.map((timeStr) => {
-              const isFullHour = timeStr.endsWith(":00");
-              return (
-                <tr key={timeStr}>
-                  <td className="sticky left-0 z-30 bg-[#121318] pr-4 text-right align-top -translate-y-2 text-sm text-white font-mono font-bold">
-                    {isFullHour ? timeStr : ""}
-                  </td>
-                  {session.days.map((day) => {
-                    const slotKey = makeSlotKey(day.date, timeStr);
-                    const availableUsers = slotUsersMap[slotKey] ?? [];
-                    const count = availableUsers.length;
-                    const isMine = mySlots.has(slotKey);
-                    const isFullMatch =
-                      count === totalParticipants && totalParticipants > 0;
-                    const fillPercent =
-                      count > 0
-                        ? Math.round((count / totalParticipants) * 100)
-                        : 0;
-                    const isHighlightedUserHere = highlightedUserId
-                      ? availableUsers.some((u) => u.id === highlightedUserId)
-                      : false;
-                    const highlightedColor = highlightedUserId
-                      ? assignedColors.get(highlightedUserId)
-                      : undefined;
-                    const isInspectedSlot = selectedSlot === slotKey;
-
-                    return (
-                      <td
-                        key={slotKey}
-                        className={`p-0 border border-white/10 ${
-                          isFullHour ? "border-t-2 border-t-white/55" : ""
-                        }`}
-                      >
-                        <div
-                          role="button"
-                          tabIndex={0}
-                          aria-label={`${day.date} ${timeStr}, ${count} of ${totalParticipants} available`}
-                          onMouseDown={() => handleCellMouseDown(slotKey)}
-                          onMouseEnter={(e) => handleCellMouseEnter(slotKey, e)}
-                          onMouseMove={handleCellMouseMove}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" || e.key === " ") {
-                              e.preventDefault();
-                              handleCellMouseDown(slotKey);
-                            }
-                          }}
-                          className={`relative overflow-hidden h-10 lg:h-11 xl:h-12 flex items-center justify-end px-3 text-sm transition-all duration-150 cursor-pointer bg-[#181a20] hover:bg-white/[0.04] ${
-                            isInspectedSlot
-                              ? "ring-2 ring-inset ring-white z-20"
-                              : ""
-                          }`}
-                        >
-                          <div
-                            style={{
-                              width: highlightedUserId
-                                ? isHighlightedUserHere
-                                  ? "100%"
-                                  : "0%"
-                                : `${fillPercent}%`,
-                              backgroundColor:
-                                highlightedUserId && isHighlightedUserHere
-                                  ? highlightedColor
-                                  : undefined,
-                            }}
-                            className={`
-                              absolute inset-y-0 left-0 transition-all duration-300 ease-out
-                              ${
-                                highlightedUserId
-                                  ? ""
-                                  : isFullMatch
-                                    ? "bg-[#3b5278]"
-                                    : "bg-white/15"
-                              }
-                            `}
-                          >
-                            {isMine && <CheckIcon className="w-5 h-5" />}
-                          </div>
-                        </div>
-                      </td>
-                    );
-                  })}
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+      <ScheduleTable
+        session={session}
+        timeLabels={timeLabels}
+        slotUsersMap={slotUsersMap}
+        totalParticipants={totalParticipants}
+        mySlots={mySlots}
+        highlightedUserId={highlightedUserId}
+        assignedColors={assignedColors}
+        selectedSlot={selectedSlot}
+        scrollContainerRef={scrollContainerRef}
+        onCellMouseDown={handleCellMouseDown}
+        onCellMouseEnter={handleCellMouseEnter}
+        onCellMouseMove={handleCellMouseMove}
+        onMouseLeave={handleTableMouseLeave}
+      />
 
       {hoveredSlot && (
         <div
