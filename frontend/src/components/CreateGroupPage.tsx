@@ -160,16 +160,19 @@ export function CreateGroupPage({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="w-full max-w-5xl mx-auto space-y-8">
+    <form onSubmit={handleSubmit} className="w-full max-w-5xl mx-auto space-y-6 sm:space-y-8">
       <div className="flex items-end justify-between gap-4 border-b border-white/15 pb-5">
-        <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight text-white">
+        <h1 className="text-2xl sm:text-4xl font-semibold tracking-tight text-white">
           Create Poll
         </h1>
       </div>
 
       <div>
         <div className="flex items-center justify-between mb-2">
-          <label className="block text-xs font-semibold uppercase tracking-wider text-white">
+          <label
+            htmlFor="create-poll-title-input"
+            className="block text-xs font-semibold uppercase tracking-wider text-white"
+          >
             Meeting Title
           </label>
           <span className="text-xs font-mono text-white">
@@ -177,6 +180,7 @@ export function CreateGroupPage({
           </span>
         </div>
         <input
+          id="create-poll-title-input"
           type="text"
           maxLength={MAX_TITLE_LENGTH}
           value={title}
@@ -187,12 +191,12 @@ export function CreateGroupPage({
       </div>
 
       <div>
-        <div className="flex items-center justify-between mb-5">
-          <div className="flex items-baseline gap-4">
-            <h2 className="text-2xl font-semibold tracking-tight text-white">
+        <div className="flex items-center justify-between mb-4 sm:mb-5">
+          <div className="flex items-baseline gap-3 sm:gap-4">
+            <h2 className="text-xl sm:text-2xl font-semibold tracking-tight text-white">
               {monthName}
             </h2>
-            <span className="text-sm font-mono font-bold text-white">
+            <span className="text-xs sm:text-sm font-mono font-bold text-white">
               {selectedDates.length}/{MAX_DAYS} days
             </span>
           </div>
@@ -201,7 +205,7 @@ export function CreateGroupPage({
               type="button"
               onClick={prevMonth}
               aria-label="Previous month"
-              className="p-2.5 bg-[#181a20] border border-white/20 rounded-md hover:bg-white/10 text-white transition-transform active:scale-95 cursor-pointer"
+              className="p-2 sm:p-2.5 bg-[#181a20] border border-white/20 rounded-md hover:bg-white/10 text-white transition-transform active:scale-95 cursor-pointer"
             >
               <ChevronLeftIcon className="w-5 h-5" />
             </button>
@@ -209,7 +213,7 @@ export function CreateGroupPage({
               type="button"
               onClick={nextMonth}
               aria-label="Next month"
-              className="p-2.5 bg-[#181a20] border border-white/20 rounded-md hover:bg-white/10 text-white transition-transform active:scale-95 cursor-pointer"
+              className="p-2 sm:p-2.5 bg-[#181a20] border border-white/20 rounded-md hover:bg-white/10 text-white transition-transform active:scale-95 cursor-pointer"
             >
               <ChevronRightIcon className="w-5 h-5" />
             </button>
@@ -222,7 +226,7 @@ export function CreateGroupPage({
               {WEEKDAYS.map((day) => (
                 <th
                   key={day}
-                  className="text-sm font-semibold uppercase tracking-wider text-white py-2.5 border border-white/20 text-center"
+                  className="text-xs sm:text-sm font-semibold uppercase tracking-wider text-white py-2 sm:py-2.5 border border-white/20 text-center"
                 >
                   {day}
                 </th>
@@ -237,7 +241,7 @@ export function CreateGroupPage({
                     return (
                       <td
                         key={`empty-${wIdx}-${dIdx}`}
-                        className="h-16 md:h-20 bg-[#14161c] border border-white/20 p-0"
+                        className="h-12 sm:h-16 md:h-20 bg-[#14161c] border border-white/20 p-0"
                       />
                     );
                   }
@@ -254,8 +258,10 @@ export function CreateGroupPage({
                     >
                       <button
                         type="button"
+                        aria-pressed={isSelected}
+                        aria-label={`${dateStr}${isSelected ? ' (selected)' : ''}`}
                         onClick={() => toggleDate(dateStr)}
-                        className={`relative overflow-hidden w-full h-16 md:h-20 text-lg transition-all duration-200 cursor-pointer flex items-center justify-center bg-[#181a20] hover:bg-white/10 text-white ${
+                        className={`relative overflow-hidden w-full h-12 sm:h-16 md:h-20 text-base sm:text-lg transition-all duration-200 cursor-pointer flex items-center justify-center bg-[#181a20] hover:bg-white/10 text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white ${
                           isSelected ? 'font-semibold' : ''
                         }`}
                       >
@@ -279,89 +285,96 @@ export function CreateGroupPage({
           </tbody>
         </table>
 
-        <div
-          className={`grid transition-all duration-300 ease-out ${
-            selectedDates.length > 0
-              ? 'grid-rows-[1fr] opacity-100 mt-8 pt-6 border-t border-white/15'
-              : 'grid-rows-[0fr] opacity-0 mt-0 pt-0 border-t-0 pointer-events-none'
-          }`}
-        >
-          <div className="overflow-hidden space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 items-end">
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-white mb-2">
-                  From
-                </label>
-                <select
-                  value={gridStartHour}
-                  onChange={(e) => setGridStartHour(e.target.value)}
-                  className="w-full px-4 py-3 text-base font-bold bg-[#181a20] text-white border border-white/20 rounded-md focus:outline-none focus:border-white transition-colors"
-                >
-                  {HOURS.map((h) => (
-                    <option
-                      key={h.value}
-                      value={h.value}
-                      className="bg-[#181a20] text-white font-bold"
-                    >
-                      {h.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-white mb-2">
-                  To
-                </label>
-                <select
-                  value={gridEndHour}
-                  onChange={(e) => setGridEndHour(e.target.value)}
-                  className="w-full px-4 py-3 text-base font-bold bg-[#181a20] text-white border border-white/20 rounded-md focus:outline-none focus:border-white transition-colors"
-                >
-                  {HOURS.map((h) => (
-                    <option
-                      key={h.value}
-                      value={h.value}
-                      className="bg-[#181a20] text-white font-bold"
-                    >
-                      {h.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-white mb-2">
-                  Timezone
-                </label>
-                <select
-                  value={timezone}
-                  onChange={(e) => setTimezone(e.target.value)}
-                  className="w-full px-4 py-3 text-base bg-[#181a20] text-white border border-white/20 rounded-md focus:outline-none focus:border-white transition-colors"
-                >
-                  {TIMEZONES.map((tz) => (
-                    <option key={tz} value={tz} className="bg-[#181a20] text-white">
-                      {tz}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <button
-                type="submit"
-                disabled={submitting}
-                className="w-full py-3 px-5 bg-white hover:bg-white/90 text-black text-base font-semibold rounded-md transition-transform active:scale-95 cursor-pointer disabled:opacity-50"
+        <div className="mt-8 pt-6 border-t border-white/15 space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 items-end">
+            <div>
+              <label
+                htmlFor="create-poll-from-select"
+                className="block text-xs font-semibold uppercase tracking-wider text-white mb-2"
               >
-                {submitting ? 'Creating...' : 'Create Poll'}
-              </button>
+                From
+              </label>
+              <select
+                id="create-poll-from-select"
+                value={gridStartHour}
+                onChange={(e) => setGridStartHour(e.target.value)}
+                className="w-full px-4 py-3 text-base font-bold bg-[#181a20] text-white border border-white/20 rounded-md focus:outline-none focus:border-white transition-colors"
+              >
+                {HOURS.map((h) => (
+                  <option
+                    key={h.value}
+                    value={h.value}
+                    className="bg-[#181a20] text-white font-bold"
+                  >
+                    {h.label}
+                  </option>
+                ))}
+              </select>
             </div>
 
-            {error && (
-              <div className="px-4 py-3 text-sm text-white bg-[#181a20] border border-white/30 rounded-md">
-                {error}
-              </div>
-            )}
+            <div>
+              <label
+                htmlFor="create-poll-to-select"
+                className="block text-xs font-semibold uppercase tracking-wider text-white mb-2"
+              >
+                To
+              </label>
+              <select
+                id="create-poll-to-select"
+                value={gridEndHour}
+                onChange={(e) => setGridEndHour(e.target.value)}
+                className="w-full px-4 py-3 text-base font-bold bg-[#181a20] text-white border border-white/20 rounded-md focus:outline-none focus:border-white transition-colors"
+              >
+                {HOURS.map((h) => (
+                  <option
+                    key={h.value}
+                    value={h.value}
+                    className="bg-[#181a20] text-white font-bold"
+                  >
+                    {h.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label
+                htmlFor="create-poll-timezone-select"
+                className="block text-xs font-semibold uppercase tracking-wider text-white mb-2"
+              >
+                Timezone
+              </label>
+              <select
+                id="create-poll-timezone-select"
+                value={timezone}
+                onChange={(e) => setTimezone(e.target.value)}
+                className="w-full px-4 py-3 text-base bg-[#181a20] text-white border border-white/20 rounded-md focus:outline-none focus:border-white transition-colors"
+              >
+                {TIMEZONES.map((tz) => (
+                  <option key={tz} value={tz} className="bg-[#181a20] text-white">
+                    {tz}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <button
+              type="submit"
+              disabled={submitting}
+              className="w-full py-3 px-5 bg-white hover:bg-white/90 text-black text-base font-semibold rounded-md transition-transform active:scale-95 cursor-pointer disabled:opacity-50"
+            >
+              {submitting ? 'Creating...' : 'Create Poll'}
+            </button>
           </div>
+
+          {error && (
+            <div
+              role="alert"
+              className="px-4 py-3 text-sm text-white bg-[#181a20] border border-white/30 rounded-md"
+            >
+              {error}
+            </div>
+          )}
         </div>
       </div>
     </form>

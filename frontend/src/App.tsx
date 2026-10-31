@@ -13,7 +13,7 @@ import {
 import { CreateGroupPage } from "./components/CreateGroupPage";
 import { HelpPage } from "./components/HelpPage";
 import { HomePage } from "./components/HomePage";
-import { UserIcon } from "./components/Icons";
+import { ChevronDownIcon, UserIcon } from "./components/Icons";
 import { LoginPage } from "./components/LoginPage";
 import { SessionPage } from "./components/SessionPage";
 import type { GroupCreatePayload, GroupSession, PageName, User } from "./types";
@@ -38,10 +38,29 @@ function App() {
   const [sessionError, setSessionError] = useState<string | null>(null);
   const [hasUnsavedPollChanges, setHasUnsavedPollChanges] = useState(false);
   const [pendingPage, setPendingPage] = useState<PageName | null>(null);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   const [page, setPage] = useState<PageName>(() => {
     return getUrlSessionId() ? "session" : "home";
   });
+
+  useEffect(() => {
+    if (!mobileNavOpen) return;
+
+    const handleOutsideClick = () => setMobileNavOpen(false);
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setMobileNavOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleOutsideClick);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [mobileNavOpen]);
 
   const refreshMyGroups = useCallback(async () => {
     if (!getToken()) {
@@ -214,26 +233,37 @@ function App() {
     }
   };
 
+  const navItems: { id: PageName; label: string }[] = [
+    { id: "create", label: "Create Poll" },
+    { id: "home", label: "My Polls" },
+    { id: "help", label: "Help" },
+  ];
+
+  const currentTabLabel =
+    page === "create"
+      ? "Create Poll"
+      : page === "help"
+        ? "Help"
+        : page === "login"
+          ? currentUser
+            ? currentUser.name
+            : "Sign In"
+          : "My Polls";
+
   return (
     <div className="min-h-screen flex flex-col bg-[#121318] text-white relative">
-      <header className="relative z-20 border-b border-white/15 bg-black">
-        <div className="w-full max-w-[1800px] mx-auto px-6 lg:px-12 h-20 flex items-center justify-between gap-4">
+      <header className="relative z-30 border-b border-white/15 bg-black">
+        <div className="w-full max-w-[1800px] mx-auto px-4 sm:px-6 lg:px-12 h-16 sm:h-20 flex items-center justify-between gap-3">
           <button
             type="button"
             onClick={() => navigateTo("home")}
-            className="font-brand text-3xl text-white cursor-pointer tracking-wide"
+            className="font-brand text-2xl sm:text-3xl text-white cursor-pointer tracking-wide shrink-0"
           >
             TimeToMeet
           </button>
 
-          <nav className="flex items-center gap-8">
-            {(
-              [
-                { id: "create", label: "Create Poll" },
-                { id: "home", label: "My Polls" },
-                { id: "help", label: "Help" },
-              ] as { id: PageName; label: string }[]
-            ).map((item) => {
+          <nav className="hidden md:flex items-center gap-8">
+            {navItems.map((item) => {
               const active =
                 page === item.id || (item.id === "home" && page === "session");
               return (
@@ -256,15 +286,85 @@ function App() {
           <button
             type="button"
             onClick={() => navigateTo("login")}
-            className="inline-flex items-center gap-2 py-2 text-base font-medium text-white hover:opacity-80 transition-opacity cursor-pointer"
+            className="hidden md:inline-flex items-center gap-2 py-2 text-base font-medium text-white hover:opacity-80 transition-opacity cursor-pointer"
           >
             <UserIcon className="w-5 h-5" />
             <span>{currentUser ? currentUser.name : "Sign In"}</span>
           </button>
+
+          <div className="flex md:hidden items-center gap-2">
+            <div
+              className="relative"
+              onMouseDown={(e) => e.stopPropagation()}
+            >
+              <button
+                type="button"
+                aria-haspopup="menu"
+                aria-expanded={mobileNavOpen}
+                onClick={() => setMobileNavOpen((prev) => !prev)}
+                className="inline-flex items-center gap-2 px-3.5 py-2 text-sm font-medium text-white bg-[#181a20] hover:bg-white/10 border border-white/20 rounded-md cursor-pointer"
+              >
+                <span className="truncate max-w-[120px]">
+                  {currentTabLabel}
+                </span>
+                <ChevronDownIcon className="w-4 h-4 shrink-0" />
+              </button>
+
+              {mobileNavOpen && (
+                <div
+                  role="menu"
+                  className="absolute right-0 mt-2 w-48 max-w-[calc(100vw-2rem)] rounded-md bg-black border border-white/25 shadow-2xl z-50 py-1"
+                >
+                  {navItems.map((item) => {
+                    const active =
+                      page === item.id ||
+                      (item.id === "home" && page === "session");
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        role="menuitem"
+                        onClick={() => {
+                          setMobileNavOpen(false);
+                          navigateTo(item.id);
+                        }}
+                        className={`w-full px-4 py-2.5 text-left text-sm font-medium flex items-center justify-between cursor-pointer ${
+                          active
+                            ? "bg-white text-black font-semibold"
+                            : "text-white hover:bg-white/10"
+                        }`}
+                      >
+                        <span>{item.label}</span>
+                      </button>
+                    );
+                  })}
+                  <div className="my-1 border-t border-white/15" />
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setMobileNavOpen(false);
+                      navigateTo("login");
+                    }}
+                    className={`w-full px-4 py-2.5 text-left text-sm font-medium flex items-center gap-2 cursor-pointer ${
+                      page === "login"
+                        ? "bg-white text-black font-semibold"
+                        : "text-white hover:bg-white/10"
+                    }`}
+                  >
+                    <UserIcon className="w-4 h-4 shrink-0" />
+                    <span className="truncate">
+                      {currentUser ? currentUser.name : "Sign In"}
+                    </span>
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </header>
 
-      <main className="relative z-10 flex-1 w-full max-w-[1800px] mx-auto px-6 lg:px-12 py-8">
+      <main className="relative z-10 flex-1 w-full max-w-[1800px] mx-auto px-4 sm:px-6 lg:px-12 py-5 sm:py-8">
         {page === "home" && (
           <HomePage
             sessions={sessions}

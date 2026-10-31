@@ -112,11 +112,16 @@ export function LoginPage({ currentUser, onLogin, onLogout }: LoginPageProps) {
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="space-y-4">
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-white mb-2">
+              <label
+                htmlFor="login-email-input"
+                className="block text-xs font-semibold uppercase tracking-wider text-white mb-2"
+              >
                 Email
               </label>
               <input
+                id="login-email-input"
                 type="email"
+                autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
@@ -126,11 +131,16 @@ export function LoginPage({ currentUser, onLogin, onLogout }: LoginPageProps) {
 
             {mode === "register" && (
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-white mb-2">
+                <label
+                  htmlFor="login-nickname-input"
+                  className="block text-xs font-semibold uppercase tracking-wider text-white mb-2"
+                >
                   Nickname
                 </label>
                 <input
+                  id="login-nickname-input"
                   type="text"
+                  autoComplete="name"
                   value={nickname}
                   onChange={(e) => setNickname(e.target.value)}
                   placeholder="Alice Nowak"
@@ -140,11 +150,18 @@ export function LoginPage({ currentUser, onLogin, onLogout }: LoginPageProps) {
             )}
 
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-white mb-2">
+              <label
+                htmlFor="login-password-input"
+                className="block text-xs font-semibold uppercase tracking-wider text-white mb-2"
+              >
                 Password
               </label>
               <input
+                id="login-password-input"
                 type="password"
+                autoComplete={
+                  mode === "login" ? "current-password" : "new-password"
+                }
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
@@ -154,7 +171,10 @@ export function LoginPage({ currentUser, onLogin, onLogout }: LoginPageProps) {
           </div>
 
           {error && (
-            <div className="px-4 py-3 text-sm text-white bg-[#181a20] border border-white/30 rounded-md">
+            <div
+              role="alert"
+              className="px-4 py-3 text-sm text-white bg-[#181a20] border border-white/30 rounded-md"
+            >
               {error}
             </div>
           )}

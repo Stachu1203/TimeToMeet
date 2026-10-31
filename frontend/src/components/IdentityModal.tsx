@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface IdentityModalProps {
   title: string;
@@ -15,6 +15,35 @@ export function IdentityModal({
 }: IdentityModalProps) {
   const [guestName, setGuestName] = useState("");
   const [error, setError] = useState("");
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && onClose) {
+        e.preventDefault();
+        onClose();
+        return;
+      }
+      if (e.key === "Tab" && dialogRef.current) {
+        const focusable = dialogRef.current.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+        );
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
 
   const handleGuestSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,10 +58,23 @@ export function IdentityModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4">
-      <div className="w-full max-w-md rounded-md bg-[#181a20] border border-white/25 p-6 space-y-6 shadow-2xl">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="identity-modal-title"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4"
+    >
+      <div
+        ref={dialogRef}
+        className="w-full max-w-md rounded-md bg-[#181a20] border border-white/25 p-6 space-y-6 shadow-2xl"
+      >
         <div className="flex items-center justify-between border-b border-white/15 pb-4">
-          <h2 className="text-2xl font-semibold text-white">{title}</h2>
+          <h2
+            id="identity-modal-title"
+            className="text-2xl font-semibold text-white"
+          >
+            {title}
+          </h2>
           {onClose && (
             <button
               type="button"
@@ -46,10 +88,14 @@ export function IdentityModal({
 
         <form onSubmit={handleGuestSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-white mb-2">
-              Vote as Guest (No Account Token)
+            <label
+              htmlFor="guest-nickname-input"
+              className="block text-xs font-semibold uppercase tracking-wider text-white mb-2"
+            >
+              Vote as Guest (No Account Needed)
             </label>
             <input
+              id="guest-nickname-input"
               type="text"
               autoFocus
               value={guestName}
@@ -60,7 +106,10 @@ export function IdentityModal({
           </div>
 
           {error && (
-            <div className="px-4 py-2.5 text-sm text-white bg-[#121318] border border-white/30 rounded-md">
+            <div
+              role="alert"
+              className="px-4 py-2.5 text-sm text-white bg-[#121318] border border-white/30 rounded-md"
+            >
               {error}
             </div>
           )}
