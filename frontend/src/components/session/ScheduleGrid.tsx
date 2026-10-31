@@ -197,7 +197,7 @@ export const ScheduleTable = React.memo(function ScheduleTable({
           <tr>
             <th
               title={session.timezone}
-              className="sticky left-0 z-30 bg-[#121318] w-14 md:w-20 pb-2 md:pb-3 pr-1.5 md:pr-4 text-right text-[11px] md:text-sm font-mono font-bold text-white truncate"
+              className="sticky left-0 z-30 bg-[#121318] w-14 md:w-20 pb-2 md:pb-3 pr-1.5 md:pr-4 text-right text-[11px] md:text-sm font-mono font-bold text-white"
             >
               {session.timezone}
             </th>
