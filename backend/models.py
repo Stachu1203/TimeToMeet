@@ -2,6 +2,7 @@ import uuid
 from sqlalchemy import Column, String, Text, Time, Date, DateTime, ForeignKey, Uuid
 from sqlalchemy.orm import relationship
 from database import Base
+from datetime import date
 
 class User(Base):
     
@@ -24,6 +25,7 @@ class Group(Base):
     creator_id = Column(Uuid, ForeignKey("users.id"))
     title = Column(String,nullable=False)
     description = Column(Text,nullable=True)
+    created_at = Column(Date, default=date.today, nullable=False)
     timezone = Column(String,nullable=False)
     grid_start_hour = Column(Time, nullable = False)
     grid_end_hour = Column(Time, nullable = False)
@@ -49,6 +51,7 @@ class Availability(Base):
     id = Column(Uuid, primary_key=True, default = uuid.uuid4)
     group_id = Column(Uuid, ForeignKey("groups.id"))
     user_id = Column(Uuid, ForeignKey("users.id"))
+    voter_name = Column(String, nullable=True)
     start_time = Column(DateTime(timezone=True), nullable = False)
     end_time = Column(DateTime(timezone=True), nullable = False)
 

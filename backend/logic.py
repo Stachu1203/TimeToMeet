@@ -13,14 +13,16 @@ def partition(start,end,interval):
 
 
 def calculate_overlaps(availabilities, interval_minutes=30):
-    heatmap = {}
+    slot_users = {}
 
     for avaliability in availabilities:
         blocks = partition(avaliability.start_time, avaliability.end_time, interval_minutes)
 
         for block in blocks:
-            if block in heatmap:
-                heatmap[block] += 1
-            else:
-                heatmap[block] = 1
-    return heatmap
+            if block not in slot_users:
+                slot_users[block] = {}
+            slot_users[block][avaliability.user_id] = avaliability.voter_name
+
+    heatmap = {block: len(users) for block, users in slot_users.items()}
+    available_users = {block: list(users.values()) for block, users in slot_users.items()}
+    return heatmap, available_users
