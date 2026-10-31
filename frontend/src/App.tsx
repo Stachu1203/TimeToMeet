@@ -125,9 +125,8 @@ function App() {
           <nav className="flex items-center gap-8">
             {(
               [
-                { id: "home", label: "My Polls" },
                 { id: "create", label: "Create Poll" },
-                { id: "login", label: "Login" },
+                { id: "home", label: "My Polls" },
                 { id: "help", label: "Help" },
               ] as { id: PageName; label: string }[]
             ).map((item) => {
