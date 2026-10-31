@@ -1,11 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
-import {
-  formatShortDate,
-  generateTimeLabels,
-  makeSlotKey,
-} from '../mockData';
-import type { GroupSession, User } from '../types';
-import { CheckIcon, LinkIcon, TrashIcon } from './Icons';
+import { useEffect, useMemo, useState } from "react";
+import { formatShortDate, generateTimeLabels, makeSlotKey } from "../mockData";
+import type { GroupSession, User } from "../types";
+import { CheckIcon, LinkIcon, TrashIcon } from "./Icons";
 
 interface SessionPageProps {
   session: GroupSession;
@@ -22,10 +18,10 @@ interface MergedWindow {
 }
 
 function add30Minutes(timeStr: string): string {
-  const [h, m] = timeStr.split(':').map(Number);
+  const [h, m] = timeStr.split(":").map(Number);
   const total = h * 60 + m + 30;
-  const nh = String(Math.floor(total / 60)).padStart(2, '0');
-  const nm = String(total % 60).padStart(2, '0');
+  const nh = String(Math.floor(total / 60)).padStart(2, "0");
+  const nm = String(total % 60).padStart(2, "0");
   return `${nh}:${nm}`;
 }
 
@@ -38,7 +34,7 @@ export function SessionPage({
 }: SessionPageProps) {
   const timeLabels = useMemo(
     () => generateTimeLabels(session.grid_start_hour, session.grid_end_hour),
-    [session.grid_start_hour, session.grid_end_hour]
+    [session.grid_start_hour, session.grid_end_hour],
   );
 
   const savedUserSlots = useMemo(() => {
@@ -46,17 +42,22 @@ export function SessionPage({
     return session.userSlots[currentUser.id] ?? [];
   }, [session.userSlots, currentUser]);
 
-  const [mySlots, setMySlots] = useState<Set<string>>(() => new Set(savedUserSlots));
+  const [mySlots, setMySlots] = useState<Set<string>>(
+    () => new Set(savedUserSlots),
+  );
   const [isDragging, setIsDragging] = useState(false);
-  const [dragMode, setDragMode] = useState<'add' | 'remove'>('add');
+  const [dragMode, setDragMode] = useState<"add" | "remove">("add");
   const [hoveredSlot, setHoveredSlot] = useState<string | null>(null);
-  const [mousePos, setMousePos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [mousePos, setMousePos] = useState<{ x: number; y: number }>({
+    x: 0,
+    y: 0,
+  });
   const [copiedLink, setCopiedLink] = useState(false);
 
   useEffect(() => {
     const handleMouseUp = () => setIsDragging(false);
-    window.addEventListener('mouseup', handleMouseUp);
-    return () => window.removeEventListener('mouseup', handleMouseUp);
+    window.addEventListener("mouseup", handleMouseUp);
+    return () => window.removeEventListener("mouseup", handleMouseUp);
   }, []);
 
   const updateSlotSelection = (nextSet: Set<string>) => {
@@ -72,12 +73,12 @@ export function SessionPage({
       return;
     }
     const alreadySelected = mySlots.has(slotKey);
-    const mode = alreadySelected ? 'remove' : 'add';
+    const mode = alreadySelected ? "remove" : "add";
     setIsDragging(true);
     setDragMode(mode);
 
     const next = new Set(mySlots);
-    if (mode === 'add') next.add(slotKey);
+    if (mode === "add") next.add(slotKey);
     else next.delete(slotKey);
     updateSlotSelection(next);
   };
@@ -87,7 +88,7 @@ export function SessionPage({
     setMousePos({ x: e.clientX, y: e.clientY });
     if (!isDragging || !currentUser) return;
     const next = new Set(mySlots);
-    if (dragMode === 'add') next.add(slotKey);
+    if (dragMode === "add") next.add(slotKey);
     else next.delete(slotKey);
     updateSlotSelection(next);
   };
@@ -109,68 +110,69 @@ export function SessionPage({
     setTimeout(() => setCopiedLink(false), 2000);
   };
 
-  const { slotUsersMap, totalParticipants, mergedMatchingWindows } = useMemo(() => {
-    const map: Record<string, User[]> = {};
-    const participantMap = new Map<string, User>();
+  const { slotUsersMap, totalParticipants, mergedMatchingWindows } =
+    useMemo(() => {
+      const map: Record<string, User[]> = {};
+      const participantMap = new Map<string, User>();
 
-    for (const p of session.participants) {
-      participantMap.set(p.id, p);
-    }
-    if (currentUser && mySlots.size > 0) {
-      participantMap.set(currentUser.id, currentUser);
-    }
-
-    for (const [uid, slots] of Object.entries(session.userSlots)) {
-      if (currentUser && uid === currentUser.id) continue;
-      const userObj = participantMap.get(uid) ?? { id: uid, name: uid };
-      for (const s of slots) {
-        if (!map[s]) map[s] = [];
-        map[s].push(userObj);
+      for (const p of session.participants) {
+        participantMap.set(p.id, p);
       }
-    }
-
-    if (currentUser) {
-      for (const s of mySlots) {
-        if (!map[s]) map[s] = [];
-        map[s].push(currentUser);
+      if (currentUser && mySlots.size > 0) {
+        participantMap.set(currentUser.id, currentUser);
       }
-    }
 
-    const total = Math.max(session.participants.length, 1);
-
-    const fullMatchKeys: string[] = [];
-    for (const [slotKey, users] of Object.entries(map)) {
-      if (users.length === total && total > 0) {
-        fullMatchKeys.push(slotKey);
+      for (const [uid, slots] of Object.entries(session.userSlots)) {
+        if (currentUser && uid === currentUser.id) continue;
+        const userObj = participantMap.get(uid) ?? { id: uid, name: uid };
+        for (const s of slots) {
+          if (!map[s]) map[s] = [];
+          map[s].push(userObj);
+        }
       }
-    }
-    fullMatchKeys.sort();
 
-    const merged: MergedWindow[] = [];
-    for (const key of fullMatchKeys) {
-      const [datePart, timePart] = key.split('T');
-      const nextEnd = add30Minutes(timePart);
-      const last = merged[merged.length - 1];
-
-      if (last && last.date === datePart && last.endTime === timePart) {
-        last.endTime = nextEnd;
-      } else {
-        merged.push({
-          date: datePart,
-          startTime: timePart,
-          endTime: nextEnd,
-        });
+      if (currentUser) {
+        for (const s of mySlots) {
+          if (!map[s]) map[s] = [];
+          map[s].push(currentUser);
+        }
       }
-    }
 
-    return {
-      slotUsersMap: map,
-      totalParticipants: total,
-      mergedMatchingWindows: merged,
-    };
-  }, [session, currentUser, mySlots]);
+      const total = Math.max(session.participants.length, 1);
 
-  const hoveredUsers = hoveredSlot ? slotUsersMap[hoveredSlot] ?? [] : [];
+      const fullMatchKeys: string[] = [];
+      for (const [slotKey, users] of Object.entries(map)) {
+        if (users.length === total && total > 0) {
+          fullMatchKeys.push(slotKey);
+        }
+      }
+      fullMatchKeys.sort();
+
+      const merged: MergedWindow[] = [];
+      for (const key of fullMatchKeys) {
+        const [datePart, timePart] = key.split("T");
+        const nextEnd = add30Minutes(timePart);
+        const last = merged[merged.length - 1];
+
+        if (last && last.date === datePart && last.endTime === timePart) {
+          last.endTime = nextEnd;
+        } else {
+          merged.push({
+            date: datePart,
+            startTime: timePart,
+            endTime: nextEnd,
+          });
+        }
+      }
+
+      return {
+        slotUsersMap: map,
+        totalParticipants: total,
+        mergedMatchingWindows: merged,
+      };
+    }, [session, currentUser, mySlots]);
+
+  const hoveredUsers = hoveredSlot ? (slotUsersMap[hoveredSlot] ?? []) : [];
 
   return (
     <div className="w-full space-y-8 select-none">
@@ -228,8 +230,12 @@ export function SessionPage({
                     key={day.id}
                     className="pb-3 px-2 text-center border-b-2 border-white/50"
                   >
-                    <div className="text-base font-semibold text-white">{weekday}</div>
-                    <div className="text-sm font-medium text-white">{monthDay}</div>
+                    <div className="text-base font-semibold text-white">
+                      {weekday}
+                    </div>
+                    <div className="text-sm font-medium text-white">
+                      {monthDay}
+                    </div>
                   </th>
                 );
               })}
@@ -237,11 +243,11 @@ export function SessionPage({
           </thead>
           <tbody>
             {timeLabels.map((timeStr) => {
-              const isFullHour = timeStr.endsWith(':00');
+              const isFullHour = timeStr.endsWith(":00");
               return (
                 <tr key={timeStr}>
                   <td className="pr-4 text-right align-top -translate-y-2 text-sm text-white font-mono font-bold">
-                    {isFullHour ? timeStr : ''}
+                    {isFullHour ? timeStr : ""}
                   </td>
                   {session.days.map((day) => {
                     const slotKey = makeSlotKey(day.date, timeStr);
@@ -251,13 +257,15 @@ export function SessionPage({
                     const isFullMatch =
                       count === totalParticipants && totalParticipants > 0;
                     const fillPercent =
-                      count > 0 ? Math.round((count / totalParticipants) * 100) : 0;
+                      count > 0
+                        ? Math.round((count / totalParticipants) * 100)
+                        : 0;
 
                     return (
                       <td
                         key={slotKey}
                         className={`p-0 border border-white/20 ${
-                          isFullHour ? 'border-t-2 border-t-white/55' : ''
+                          isFullHour ? "border-t-2 border-t-white/55" : ""
                         }`}
                       >
                         <div
@@ -268,7 +276,7 @@ export function SessionPage({
                           onMouseEnter={(e) => handleCellMouseEnter(slotKey, e)}
                           onMouseMove={handleCellMouseMove}
                           onKeyDown={(e) => {
-                            if (e.key === 'Enter' || e.key === ' ') {
+                            if (e.key === "Enter" || e.key === " ") {
                               e.preventDefault();
                               handleCellMouseDown(slotKey);
                             }
@@ -279,7 +287,7 @@ export function SessionPage({
                             style={{ width: `${fillPercent}%` }}
                             className={`
                               absolute inset-y-0 left-0 transition-all duration-300 ease-out
-                              ${isFullMatch ? 'bg-[#3b5278]' : 'bg-white/15'}
+                              ${isFullMatch ? "bg-[#3b5278]" : "bg-white/15"}
                             `}
                           />
 
@@ -288,7 +296,7 @@ export function SessionPage({
                           )}
 
                           <span className="relative z-10 text-xs sm:text-sm font-mono font-bold text-white">
-                            {count > 0 ? `${count}/${totalParticipants}` : ''}
+                            {count > 0 ? `${count}/${totalParticipants}` : ""}
                           </span>
                         </div>
                       </td>
@@ -311,7 +319,7 @@ export function SessionPage({
         >
           <div className="flex items-center justify-between border-b border-white/15 pb-2">
             <span className="text-sm font-bold text-white">
-              {hoveredSlot.replace('T', ' · ')}
+              {hoveredSlot.replace("T", " · ")}
             </span>
             <span className="px-2 py-0.5 text-xs font-mono font-bold bg-white/10 text-white rounded-md border border-white/20">
               {hoveredUsers.length}/{totalParticipants}
@@ -336,6 +344,20 @@ export function SessionPage({
           )}
         </div>
       )}
+
+      <div className="border-t border-white/15 space-y-4 text-lg">
+        <h2 className="text-2xl font-semibold text-white">
+          List of all participants
+        </h2>
+        <ul className="list-disc pl-5 space-y-1">
+          {session.participants.map((participant) => (
+            <li key={participant.id} className="flex items-center gap-2">
+              <CheckIcon />
+              {participant.name}
+            </li>
+          ))}
+        </ul>
+      </div>
 
       <div className="pt-6 border-t border-white/15 space-y-4">
         <h2 className="text-2xl font-semibold text-white">Matching Dates</h2>
