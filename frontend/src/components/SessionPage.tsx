@@ -1,10 +1,16 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { formatShortDate, generateTimeLabels, makeSlotKey } from "../mockData";
 import type { GroupSession, User } from "../types";
-import { ArrowLeftIcon, CheckIcon, LinkIcon, TrashIcon } from "./Icons";
+import {
+  ArrowLeftIcon,
+  CheckIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  LinkIcon,
+  TrashIcon,
+} from "./Icons";
 import { IdentityModal } from "./IdentityModal";
 
-// Accessible color palette
 const palette = [
   "#4477bb",
   "#cc4466",
@@ -88,6 +94,16 @@ export function SessionPage({
   const [highlightedUserId, setHighlightedUserId] = useState<string | null>(
     null,
   );
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  const handleScrollDays = (direction: "left" | "right") => {
+    if (!scrollContainerRef.current) return;
+    const scrollAmount = direction === "left" ? -440 : 440;
+    scrollContainerRef.current.scrollBy({
+      left: scrollAmount,
+      behavior: "smooth",
+    });
+  };
 
   useEffect(() => {
     const handleMouseUp = () => setIsDragging(false);
@@ -331,14 +347,41 @@ export function SessionPage({
         </div>
       </div>
 
+      {session.days.length > 7 && (
+        <div className="flex items-center justify-end gap-2">
+          <button
+            type="button"
+            onClick={() => handleScrollDays("left")}
+            aria-label="Scroll days left"
+            className="p-2.5 bg-[#181a20] border border-white/20 rounded-md hover:bg-white/10 text-white transition-transform active:scale-95 cursor-pointer"
+          >
+            <ChevronLeftIcon className="w-5 h-5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => handleScrollDays("right")}
+            aria-label="Scroll days right"
+            className="p-2.5 bg-[#181a20] border border-white/20 rounded-md hover:bg-white/10 text-white transition-transform active:scale-95 cursor-pointer"
+          >
+            <ChevronRightIcon className="w-5 h-5" />
+          </button>
+        </div>
+      )}
+
       <div
+        ref={scrollContainerRef}
         className="w-full overflow-x-auto"
         onMouseLeave={() => setHoveredSlot(null)}
       >
-        <table className="w-full border-collapse table-fixed min-w-[680px]">
+        <table
+          style={{
+            minWidth: `${Math.max(680, session.days.length * 110 + 80)}px`,
+          }}
+          className="w-full select-none border-collapse table-fixed"
+        >
           <thead>
             <tr>
-              <th className="w-20 pb-3 pr-4 text-right text-sm font-mono font-bold text-white">
+              <th className="sticky left-0 z-30 bg-[#121318] w-20 pb-3 pr-4 text-right text-sm font-mono font-bold text-white">
                 {session.timezone}
               </th>
               {session.days.map((day) => {
@@ -364,7 +407,7 @@ export function SessionPage({
               const isFullHour = timeStr.endsWith(":00");
               return (
                 <tr key={timeStr}>
-                  <td className="pr-4 text-right align-top -translate-y-2 text-sm text-white font-mono font-bold">
+                  <td className="sticky left-0 z-30 bg-[#121318] pr-4 text-right align-top -translate-y-2 text-sm text-white font-mono font-bold">
                     {isFullHour ? timeStr : ""}
                   </td>
                   {session.days.map((day) => {
