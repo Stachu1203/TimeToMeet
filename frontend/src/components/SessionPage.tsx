@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { formatShortDate, generateTimeLabels, makeSlotKey } from "../mockData";
 import type { GroupSession, User } from "../types";
 import { ArrowLeftIcon, CheckIcon, LinkIcon, TrashIcon } from "./Icons";
+import { IdentityModal } from "./IdentityModal";
 
 // Accessible color palette
 const palette = [
@@ -21,6 +22,7 @@ const palette = [
 interface SessionPageProps {
   session: GroupSession;
   currentUser: User | null;
+  onSelectUser: (user: User) => void;
   onSaveUserSlots: (sessionId: string, user: User, slots: string[]) => void;
   onClearUserSlots: (sessionId: string, userId: string) => void;
   onOpenLogin: () => void;
@@ -52,6 +54,7 @@ const getColor = (userId: string) => {
 export function SessionPage({
   session,
   currentUser,
+  onSelectUser,
   onSaveUserSlots,
   onClearUserSlots,
   onOpenLogin,
@@ -78,6 +81,8 @@ export function SessionPage({
     y: 0,
   });
   const [copiedLink, setCopiedLink] = useState(false);
+  const [showIdentityModal, setShowIdentityModal] = useState(!currentUser);
+  const [pendingSlotKey, setPendingSlotKey] = useState<string | null>(null);
 
   useEffect(() => {
     const handleMouseUp = () => setIsDragging(false);
@@ -85,16 +90,18 @@ export function SessionPage({
     return () => window.removeEventListener("mouseup", handleMouseUp);
   }, []);
 
-  const updateSlotSelection = (nextSet: Set<string>) => {
+  const updateSlotSelection = (nextSet: Set<string>, userOverride?: User) => {
+    const activeUser = userOverride ?? currentUser;
     setMySlots(nextSet);
-    if (currentUser) {
-      onSaveUserSlots(session.id, currentUser, Array.from(nextSet).sort());
+    if (activeUser) {
+      onSaveUserSlots(session.id, activeUser, Array.from(nextSet).sort());
     }
   };
 
   const handleCellMouseDown = (slotKey: string) => {
     if (!currentUser) {
-      onOpenLogin();
+      setPendingSlotKey(slotKey);
+      setShowIdentityModal(true);
       return;
     }
     const alreadySelected = mySlots.has(slotKey);
@@ -202,13 +209,38 @@ export function SessionPage({
     for (const user of session.participants) {
       map.set(user.id, getColor(user.id));
     }
+    if (currentUser) {
+      map.set(currentUser.id, getColor(currentUser.id));
+    }
     return map;
-  }, [session]);
+  }, [session, currentUser]);
 
   const hoveredUsers = hoveredSlot ? (slotUsersMap[hoveredSlot] ?? []) : [];
 
+  const handleIdentityConfirm = (user: User) => {
+    onSelectUser(user);
+    setShowIdentityModal(false);
+    const existingSlots = new Set(session.userSlots[user.id] ?? []);
+    if (pendingSlotKey) {
+      existingSlots.add(pendingSlotKey);
+      setPendingSlotKey(null);
+    }
+    updateSlotSelection(existingSlots, user);
+  };
+
   return (
     <div className="w-full space-y-8">
+      {showIdentityModal && !currentUser && (
+        <IdentityModal
+          title="Join Meeting"
+          onSelectUser={handleIdentityConfirm}
+          onGoToLogin={onOpenLogin}
+          onClose={() => {
+            setShowIdentityModal(false);
+            setPendingSlotKey(null);
+          }}
+        />
+      )}
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-white/15 pb-5">
         <div className="flex items-center gap-4">
           <button

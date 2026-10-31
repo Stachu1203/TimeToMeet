@@ -1,9 +1,13 @@
 import { useState } from 'react';
-import type { GroupCreatePayload } from '../types';
+import type { GroupCreatePayload, User } from '../types';
 import { ChevronLeftIcon, ChevronRightIcon } from './Icons';
+import { IdentityModal } from './IdentityModal';
 
 interface CreateGroupPageProps {
-  onCreateGroup: (payload: GroupCreatePayload) => void;
+  currentUser: User | null;
+  onSelectUser: (user: User) => void;
+  onOpenLogin: () => void;
+  onCreateGroup: (payload: GroupCreatePayload, creatorOverride?: User) => void;
   onCancel: () => void;
 }
 
@@ -23,13 +27,21 @@ const TIMEZONES = [
 
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
-export function CreateGroupPage({ onCreateGroup, onCancel }: CreateGroupPageProps) {
+export function CreateGroupPage({
+  currentUser,
+  onSelectUser,
+  onOpenLogin,
+  onCreateGroup,
+  onCancel,
+}: CreateGroupPageProps) {
   const [title, setTitle] = useState('');
   const [timezone, setTimezone] = useState('Europe/Warsaw');
   const [gridStartHour, setGridStartHour] = useState('09:00:00');
   const [gridEndHour, setGridEndHour] = useState('17:00:00');
   const [selectedDates, setSelectedDates] = useState<string[]>([]);
   const [error, setError] = useState('');
+  const [showIdentityModal, setShowIdentityModal] = useState(!currentUser);
+  const [pendingPayload, setPendingPayload] = useState<GroupCreatePayload | null>(null);
 
   const [viewYear, setViewYear] = useState(2026);
   const [viewMonth, setViewMonth] = useState(10);
@@ -101,17 +113,46 @@ export function CreateGroupPage({ onCreateGroup, onCancel }: CreateGroupPageProp
     }
 
     setError('');
-    onCreateGroup({
+    const payload: GroupCreatePayload = {
       title: title.trim(),
       timezone,
       grid_start_hour: gridStartHour,
       grid_end_hour: gridEndHour,
       dates: selectedDates,
-    });
+    };
+
+    if (!currentUser) {
+      setPendingPayload(payload);
+      setShowIdentityModal(true);
+      return;
+    }
+
+    onCreateGroup(payload);
+  };
+
+  const handleIdentityConfirm = (user: User) => {
+    onSelectUser(user);
+    setShowIdentityModal(false);
+    if (pendingPayload) {
+      onCreateGroup(pendingPayload, user);
+      setPendingPayload(null);
+    }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="w-full max-w-5xl mx-auto space-y-8">
+    <>
+      {showIdentityModal && !currentUser && (
+        <IdentityModal
+          title="Identify as Poll Creator"
+          onSelectUser={handleIdentityConfirm}
+          onGoToLogin={onOpenLogin}
+          onClose={() => {
+            setShowIdentityModal(false);
+            setPendingPayload(null);
+          }}
+        />
+      )}
+      <form onSubmit={handleSubmit} className="w-full max-w-5xl mx-auto space-y-8">
       <div className="flex items-end justify-between gap-4 border-b border-white/15 pb-5">
         <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight text-white">
           Create Poll
@@ -311,5 +352,6 @@ export function CreateGroupPage({ onCreateGroup, onCancel }: CreateGroupPageProp
         </div>
       </div>
     </form>
+    </>
   );
 }

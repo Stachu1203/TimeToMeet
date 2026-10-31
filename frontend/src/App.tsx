@@ -5,12 +5,12 @@ import { HomePage } from "./components/HomePage";
 import { UserIcon } from "./components/Icons";
 import { LoginPage } from "./components/LoginPage";
 import { SessionPage } from "./components/SessionPage";
-import { DEMO_USERS, INITIAL_SESSIONS } from "./mockData";
+import { INITIAL_SESSIONS } from "./mockData";
 import type { GroupCreatePayload, GroupSession, PageName, User } from "./types";
 
 function App() {
   const [sessions, setSessions] = useState<GroupSession[]>(INITIAL_SESSIONS);
-  const [currentUser, setCurrentUser] = useState<User | null>(DEMO_USERS[0]);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [activeSessionId, setActiveSessionId] = useState<string>(
     INITIAL_SESSIONS[0].id,
   );
@@ -34,15 +34,19 @@ function App() {
     setPage("home");
   };
 
-  const handleCreateGroup = (payload: GroupCreatePayload) => {
+  const handleCreateGroup = (
+    payload: GroupCreatePayload,
+    creatorOverride?: User,
+  ) => {
     const newId = crypto.randomUUID
       ? crypto.randomUUID()
       : `session-${Date.now()}`;
 
-    const creator = currentUser ?? {
-      id: "u-admin",
-      name: "Organizer",
-    };
+    const creator = creatorOverride ??
+      currentUser ?? {
+        id: "u-admin",
+        name: "Organizer",
+      };
 
     const todayStr = new Date().toISOString().slice(0, 10);
 
@@ -179,6 +183,9 @@ function App() {
 
         {page === "create" && (
           <CreateGroupPage
+            currentUser={currentUser}
+            onSelectUser={setCurrentUser}
+            onOpenLogin={() => setPage("login")}
             onCreateGroup={handleCreateGroup}
             onCancel={() => setPage("home")}
           />
@@ -189,6 +196,7 @@ function App() {
             key={`${activeSession.id}-${currentUser?.id ?? "guest"}`}
             session={activeSession}
             currentUser={currentUser}
+            onSelectUser={setCurrentUser}
             onSaveUserSlots={handleSaveUserSlots}
             onClearUserSlots={handleClearUserSlots}
             onOpenLogin={() => setPage("login")}
