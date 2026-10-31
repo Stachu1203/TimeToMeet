@@ -83,6 +83,11 @@ export function SessionPage({
   const [copiedLink, setCopiedLink] = useState(false);
   const [showIdentityModal, setShowIdentityModal] = useState(!currentUser);
   const [pendingSlotKey, setPendingSlotKey] = useState<string | null>(null);
+  const [gridMode, setGridMode] = useState<"vote" | "inspect">("vote");
+  const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
+  const [highlightedUserId, setHighlightedUserId] = useState<string | null>(
+    null,
+  );
 
   useEffect(() => {
     const handleMouseUp = () => setIsDragging(false);
@@ -99,6 +104,10 @@ export function SessionPage({
   };
 
   const handleCellMouseDown = (slotKey: string) => {
+    if (gridMode === "inspect") {
+      setSelectedSlot((prev) => (prev === slotKey ? null : slotKey));
+      return;
+    }
     if (!currentUser) {
       setPendingSlotKey(slotKey);
       setShowIdentityModal(true);
@@ -118,7 +127,7 @@ export function SessionPage({
   const handleCellMouseEnter = (slotKey: string, e: React.MouseEvent) => {
     setHoveredSlot(slotKey);
     setMousePos({ x: e.clientX, y: e.clientY });
-    if (!isDragging || !currentUser) return;
+    if (gridMode === "inspect" || !isDragging || !currentUser) return;
     const next = new Set(mySlots);
     if (dragMode === "add") next.add(slotKey);
     else next.delete(slotKey);
@@ -216,6 +225,12 @@ export function SessionPage({
   }, [session, currentUser]);
 
   const hoveredUsers = hoveredSlot ? (slotUsersMap[hoveredSlot] ?? []) : [];
+  const selectedSlotUsers = selectedSlot
+    ? (slotUsersMap[selectedSlot] ?? [])
+    : [];
+  const highlightedUser = session.participants.find(
+    (p) => p.id === highlightedUserId,
+  );
 
   const handleIdentityConfirm = (user: User) => {
     onSelectUser(user);
@@ -257,6 +272,34 @@ export function SessionPage({
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
+          <div className="inline-flex md:hidden rounded-md bg-[#181a20] border border-white/20 p-1">
+            <button
+              type="button"
+              onClick={() => {
+                setGridMode("vote");
+                setSelectedSlot(null);
+              }}
+              className={`px-3 py-1.5 text-sm font-semibold rounded-sm transition-colors cursor-pointer ${
+                gridMode === "vote"
+                  ? "bg-white text-black"
+                  : "text-white hover:bg-white/10"
+              }`}
+            >
+              Vote
+            </button>
+            <button
+              type="button"
+              onClick={() => setGridMode("inspect")}
+              className={`px-3 py-1.5 text-sm font-semibold rounded-sm transition-colors cursor-pointer ${
+                gridMode === "inspect"
+                  ? "bg-white text-black"
+                  : "text-white hover:bg-white/10"
+              }`}
+            >
+              Inspect
+            </button>
+          </div>
+
           {currentUser && mySlots.size > 0 && (
             <button
               type="button"
@@ -335,6 +378,13 @@ export function SessionPage({
                       count > 0
                         ? Math.round((count / totalParticipants) * 100)
                         : 0;
+                    const isHighlightedUserHere = highlightedUserId
+                      ? availableUsers.some((u) => u.id === highlightedUserId)
+                      : false;
+                    const highlightedColor = highlightedUserId
+                      ? assignedColors.get(highlightedUserId)
+                      : undefined;
+                    const isInspectedSlot = selectedSlot === slotKey;
 
                     return (
                       <td
@@ -356,13 +406,33 @@ export function SessionPage({
                               handleCellMouseDown(slotKey);
                             }
                           }}
-                          className="relative overflow-hidden h-10 lg:h-11 xl:h-12 flex items-center justify-end px-3 text-sm transition-all duration-150 cursor-pointer bg-[#181a20] hover:bg-white/[0.04]"
+                          className={`relative overflow-hidden h-10 lg:h-11 xl:h-12 flex items-center justify-end px-3 text-sm transition-all duration-150 cursor-pointer bg-[#181a20] hover:bg-white/[0.04] ${
+                            isInspectedSlot
+                              ? "ring-2 ring-inset ring-white z-20"
+                              : ""
+                          }`}
                         >
                           <div
-                            style={{ width: `${fillPercent}%` }}
+                            style={{
+                              width: highlightedUserId
+                                ? isHighlightedUserHere
+                                  ? "100%"
+                                  : "0%"
+                                : `${fillPercent}%`,
+                              backgroundColor:
+                                highlightedUserId && isHighlightedUserHere
+                                  ? highlightedColor
+                                  : undefined,
+                            }}
                             className={`
                               absolute inset-y-0 left-0 transition-all duration-300 ease-out
-                              ${isFullMatch ? "bg-[#3b5278]" : "bg-white/15"}
+                              ${
+                                highlightedUserId
+                                  ? ""
+                                  : isFullMatch
+                                    ? "bg-[#3b5278]"
+                                    : "bg-white/15"
+                              }
                             `}
                           >
                             {isMine && <CheckIcon className="w-5 h-5" />}
@@ -384,7 +454,7 @@ export function SessionPage({
             left: Math.min(mousePos.x + 16, window.innerWidth - 280),
             top: Math.max(mousePos.y - 20, 16),
           }}
-          className="pointer-events-none fixed z-50 w-64 p-4 rounded-md bg-black border border-white/25 shadow-2xl space-y-2.5"
+          className="hidden md:block pointer-events-none fixed z-50 w-64 p-4 rounded-md bg-black border border-white/25 shadow-2xl space-y-2.5"
         >
           <div className="flex items-center justify-between border-b border-white/15 pb-2">
             <span className="text-sm font-bold text-white">
@@ -417,21 +487,93 @@ export function SessionPage({
         </div>
       )}
 
-      <div className="border-t border-white/15 space-y-4 text-lg">
-        <h2 className="text-2xl font-semibold text-white">
-          List of all participants
-        </h2>
-        <ul className="list-disc pl-5 space-y-1 w-fit">
-          {session.participants.map((participant) => (
-            <li
-              key={participant.id}
-              className="flex items-center gap-2 rounded-md p-1"
-              style={{ backgroundColor: assignedColors.get(participant.id) }}
+      {selectedSlot && gridMode === "inspect" && (
+        <div className="md:hidden p-4 rounded-md bg-[#181a20] border border-white/25 space-y-3">
+          <div className="flex items-center justify-between border-b border-white/15 pb-2">
+            <span className="text-base font-bold text-white">
+              Inspecting: {selectedSlot.replace("T", " · ")} (
+              {selectedSlotUsers.length}/{totalParticipants})
+            </span>
+            <button
+              type="button"
+              onClick={() => setSelectedSlot(null)}
+              className="px-2.5 py-1 text-xs font-semibold bg-white/10 hover:bg-white/20 rounded-md text-white cursor-pointer"
             >
-              <CheckIcon />
-              {participant.name}
-            </li>
-          ))}
+              Close
+            </button>
+          </div>
+          {selectedSlotUsers.length === 0 ? (
+            <div className="text-sm text-white">No participants available</div>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {selectedSlotUsers.map((u) => (
+                <div
+                  key={u.id}
+                  className="px-3 py-1.5 rounded-md text-sm font-medium text-white flex items-center gap-2"
+                  style={{
+                    backgroundColor: assignedColors.get(u.id),
+                  }}
+                >
+                  <span>{u.name}</span>
+                  {currentUser?.id === u.id && (
+                    <span className="w-2 h-2 rounded-full bg-white" />
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="pt-6 border-t border-white/15 space-y-4 text-lg">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-2xl font-semibold text-white">
+            List of all participants{" "}
+            {highlightedUser ? (
+              <span className="text-base font-normal text-white">
+                (Highlighting {highlightedUser.name})
+              </span>
+            ) : (
+              <span className="text-base font-normal text-white">
+                (Click on a user to highlight)
+              </span>
+            )}
+          </h2>
+          {highlightedUserId && (
+            <button
+              type="button"
+              onClick={() => setHighlightedUserId(null)}
+              className="px-3 py-1 text-xs font-semibold bg-white text-black rounded-md cursor-pointer"
+            >
+              Show All Group Overlap
+            </button>
+          )}
+        </div>
+        <ul className="flex flex-wrap gap-2">
+          {session.participants.map((participant) => {
+            const isHighlighted = highlightedUserId === participant.id;
+            return (
+              <li key={participant.id}>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setHighlightedUserId((prev) =>
+                      prev === participant.id ? null : participant.id,
+                    )
+                  }
+                  className={`flex items-center gap-2 rounded-md px-3 py-1.5 text-base font-medium text-white transition-transform active:scale-95 cursor-pointer ${
+                    isHighlighted ? "ring-2 ring-white" : ""
+                  }`}
+                  style={{
+                    backgroundColor: assignedColors.get(participant.id),
+                  }}
+                >
+                  <CheckIcon />
+                  <span>{participant.name}</span>
+                </button>
+              </li>
+            );
+          })}
         </ul>
       </div>
 
