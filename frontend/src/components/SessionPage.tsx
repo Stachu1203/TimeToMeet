@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { formatShortDate, generateTimeLabels, makeSlotKey } from "../mockData";
 import type { GroupSession, User } from "../types";
-import { CheckIcon, LinkIcon, TrashIcon } from "./Icons";
+import { ArrowLeftIcon, CheckIcon, LinkIcon, TrashIcon } from "./Icons";
 
 // Accessible color palette
 const palette = [
@@ -24,6 +24,7 @@ interface SessionPageProps {
   onSaveUserSlots: (sessionId: string, user: User, slots: string[]) => void;
   onClearUserSlots: (sessionId: string, userId: string) => void;
   onOpenLogin: () => void;
+  onBack: () => void;
 }
 
 interface MergedWindow {
@@ -54,6 +55,7 @@ export function SessionPage({
   onSaveUserSlots,
   onClearUserSlots,
   onOpenLogin,
+  onBack,
 }: SessionPageProps) {
   const timeLabels = useMemo(
     () => generateTimeLabels(session.grid_start_hour, session.grid_end_hour),
@@ -208,9 +210,19 @@ export function SessionPage({
   return (
     <div className="w-full space-y-8">
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-white/15 pb-5">
-        <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight text-white">
-          Meeting: {session.title}
-        </h1>
+        <div className="flex items-center gap-4">
+          <button
+            type="button"
+            onClick={onBack}
+            aria-label="Back to My Polls"
+            className="p-2.5 bg-[#181a20] hover:bg-white/10 border border-white/20 rounded-md text-white transition-transform active:scale-95 cursor-pointer"
+          >
+            <ArrowLeftIcon className="w-5 h-5" />
+          </button>
+          <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight text-white">
+            Meeting: {session.title}
+          </h1>
+        </div>
 
         <div className="flex flex-wrap items-center gap-3">
           {currentUser && mySlots.size > 0 && (

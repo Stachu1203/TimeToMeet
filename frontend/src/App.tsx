@@ -18,7 +18,7 @@ function App() {
   const [page, setPage] = useState<PageName>(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("session")) return "session";
-    return "session";
+    return "home";
   });
 
   const activeSession =
@@ -31,7 +31,7 @@ function App() {
 
   const handleLogin = (user: User) => {
     setCurrentUser(user);
-    setPage("session");
+    setPage("home");
   };
 
   const handleCreateGroup = (payload: GroupCreatePayload) => {
@@ -125,14 +125,14 @@ function App() {
           <nav className="flex items-center gap-8">
             {(
               [
-                { id: "session", label: "Active Session" },
-                { id: "create", label: "Create Poll" },
                 { id: "home", label: "My Polls" },
+                { id: "create", label: "Create Poll" },
                 { id: "login", label: "Login" },
                 { id: "help", label: "Help" },
               ] as { id: PageName; label: string }[]
             ).map((item) => {
-              const active = page === item.id;
+              const active =
+                page === item.id || (item.id === "home" && page === "session");
               return (
                 <button
                   key={item.id}
@@ -181,7 +181,7 @@ function App() {
         {page === "create" && (
           <CreateGroupPage
             onCreateGroup={handleCreateGroup}
-            onCancel={() => setPage("session")}
+            onCancel={() => setPage("home")}
           />
         )}
 
@@ -193,6 +193,7 @@ function App() {
             onSaveUserSlots={handleSaveUserSlots}
             onClearUserSlots={handleClearUserSlots}
             onOpenLogin={() => setPage("login")}
+            onBack={() => setPage("home")}
           />
         )}
 
