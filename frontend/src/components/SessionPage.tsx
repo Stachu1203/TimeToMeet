@@ -3,6 +3,21 @@ import { formatShortDate, generateTimeLabels, makeSlotKey } from "../mockData";
 import type { GroupSession, User } from "../types";
 import { CheckIcon, LinkIcon, TrashIcon } from "./Icons";
 
+// Accessible color palette
+const palette = [
+  "#4477bb",
+  "#cc4466",
+  "#228833",
+  "#2255aa",
+  "#993366",
+  "#006644",
+  "#117788",
+  "#882288",
+  "#bb4488",
+  "#775500",
+  "#444444",
+];
+
 interface SessionPageProps {
   session: GroupSession;
   currentUser: User | null;
@@ -24,6 +39,14 @@ function add30Minutes(timeStr: string): string {
   const nm = String(total % 60).padStart(2, "0");
   return `${nh}:${nm}`;
 }
+
+const getColor = (userId: string) => {
+  let hash = 0;
+  for (let i = 0; i < userId.length; i++) {
+    hash = (hash << 5) - hash + userId.charCodeAt(i);
+  }
+  return palette[Math.abs(hash) % palette.length];
+};
 
 export function SessionPage({
   session,
@@ -172,13 +195,21 @@ export function SessionPage({
       };
     }, [session, currentUser, mySlots]);
 
+  const assignedColors: Map<string, string> = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const user of session.participants) {
+      map.set(user.id, getColor(user.id));
+    }
+    return map;
+  }, [session]);
+
   const hoveredUsers = hoveredSlot ? (slotUsersMap[hoveredSlot] ?? []) : [];
 
   return (
-    <div className="w-full space-y-8 select-none">
+    <div className="w-full space-y-8">
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-white/15 pb-5">
         <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight text-white">
-          {session.title}
+          Meeting: {session.title}
         </h1>
 
         <div className="flex flex-wrap items-center gap-3">
@@ -333,6 +364,9 @@ export function SessionPage({
                 <div
                   key={u.id}
                   className="px-2.5 py-1.5 rounded-md bg-white/5 text-base font-medium text-white flex items-center justify-between"
+                  style={{
+                    backgroundColor: assignedColors.get(u.id),
+                  }}
                 >
                   <span>{u.name}</span>
                   {currentUser?.id === u.id && (
@@ -349,9 +383,13 @@ export function SessionPage({
         <h2 className="text-2xl font-semibold text-white">
           List of all participants
         </h2>
-        <ul className="list-disc pl-5 space-y-1">
+        <ul className="list-disc pl-5 space-y-1 w-fit">
           {session.participants.map((participant) => (
-            <li key={participant.id} className="flex items-center gap-2">
+            <li
+              key={participant.id}
+              className="flex items-center gap-2 rounded-md p-1"
+              style={{ backgroundColor: assignedColors.get(participant.id) }}
+            >
               <CheckIcon />
               {participant.name}
             </li>
