@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { DEMO_USERS } from "../mockData";
+import { fetchCurrentUser, loginUser, registerUser, setToken } from "../api";
 import type { User } from "../types";
 
 interface LoginPageProps {
@@ -9,71 +9,108 @@ interface LoginPageProps {
 }
 
 export function LoginPage({ currentUser, onLogin, onLogout }: LoginPageProps) {
-  const [name, setName] = useState(currentUser?.name ?? "");
-  const [email, setEmail] = useState(currentUser?.email ?? "");
+  const [mode, setMode] = useState<"login" | "register">("login");
+  const [email, setEmail] = useState("");
+  const [nickname, setNickname] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const trimmedName = name.trim();
-    if (!trimmedName) {
-      setError("Please enter your name or nickname.");
+    const trimmedEmail = email.trim();
+    const trimmedNickname = nickname.trim();
+
+    if (!trimmedEmail || !password) {
+      setError("Please enter your email and password.");
       return;
     }
 
-    const existingDemo = DEMO_USERS.find(
-      (u) => u.name.toLowerCase() === trimmedName.toLowerCase(),
-    );
-
-    const loggedUser: User = existingDemo ?? {
-      id: `u-${trimmedName.toLowerCase().replace(/\s+/g, "-")}`,
-      name: trimmedName,
-      email: email.trim() || null,
-    };
+    if (mode === "register" && !trimmedNickname) {
+      setError("Please enter a nickname.");
+      return;
+    }
 
     setError("");
-    onLogin(loggedUser);
+    setLoading(true);
+
+    try {
+      if (mode === "register") {
+        await registerUser(trimmedNickname, trimmedEmail, password);
+      }
+
+      const tokenRes = await loginUser(trimmedEmail, password);
+      setToken(tokenRes.access_token);
+      const profile = await fetchCurrentUser();
+      onLogin(profile);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Authentication failed.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="w-full max-w-3xl mx-auto pt-4 space-y-8">
-      <div className="border-b border-white/15 pb-5">
+    <div className="w-full max-w-2xl mx-auto pt-4 space-y-8">
+      <div className="flex items-end justify-between gap-4 border-b border-white/15 pb-5">
         <h1 className="text-3xl sm:text-4xl font-semibold text-white">
           Account Management
         </h1>
+        {!currentUser && (
+          <div className="inline-flex rounded-md bg-[#181a20] border border-white/20 p-1">
+            <button
+              type="button"
+              onClick={() => {
+                setMode("login");
+                setError("");
+              }}
+              className={`px-4 py-1.5 text-sm font-semibold rounded-sm transition-colors cursor-pointer ${
+                mode === "login"
+                  ? "bg-white text-black"
+                  : "text-white hover:bg-white/10"
+              }`}
+            >
+              Log In
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setMode("register");
+                setError("");
+              }}
+              className={`px-4 py-1.5 text-sm font-semibold rounded-sm transition-colors cursor-pointer ${
+                mode === "register"
+                  ? "bg-white text-black"
+                  : "text-white hover:bg-white/10"
+              }`}
+            >
+              Register
+            </button>
+          </div>
+        )}
       </div>
 
       {currentUser ? (
-        <div className="pt-5 border-white/15 flex items-center justify-between text-lg text-white">
-          <span className="font-semibold flex gap-4">
-            <span>Logged in as: </span>
-            <span>{currentUser.name}</span>
-          </span>
+        <div className="p-6 rounded-md bg-[#181a20] border border-white/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-white">
+          <div className="space-y-1">
+            <div className="text-xl font-semibold">{currentUser.name}</div>
+            {currentUser.email && (
+              <div className="text-sm font-mono text-white">
+                {currentUser.email}
+              </div>
+            )}
+          </div>
           <button
             type="button"
             onClick={onLogout}
-            className="px-4 py-2 text-sm font-medium text-white bg-[#181a20] hover:bg-white/10 border border-white/20 rounded-md transition-transform active:scale-95 cursor-pointer"
+            className="px-5 py-2.5 text-sm font-semibold text-white bg-[#121318] hover:bg-white/10 border border-white/20 rounded-md transition-transform active:scale-95 cursor-pointer"
           >
-            Sign out
+            Sign Out
           </button>
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-5">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-white mb-2">
-                Name or Nickname
-              </label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Alice Nowak"
-                className="w-full px-4 py-3 text-base bg-[#181a20] text-white placeholder:text-white/40 border border-white/20 rounded-md focus:outline-none focus:border-white transition-colors"
-              />
-            </div>
-
+          <div className="space-y-4">
             <div>
               <label className="block text-xs font-semibold uppercase tracking-wider text-white mb-2">
                 Email
@@ -86,6 +123,21 @@ export function LoginPage({ currentUser, onLogin, onLogout }: LoginPageProps) {
                 className="w-full px-4 py-3 text-base bg-[#181a20] text-white placeholder:text-white/40 border border-white/20 rounded-md focus:outline-none focus:border-white transition-colors"
               />
             </div>
+
+            {mode === "register" && (
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-white mb-2">
+                  Nickname
+                </label>
+                <input
+                  type="text"
+                  value={nickname}
+                  onChange={(e) => setNickname(e.target.value)}
+                  placeholder="Alice Nowak"
+                  className="w-full px-4 py-3 text-base bg-[#181a20] text-white placeholder:text-white/40 border border-white/20 rounded-md focus:outline-none focus:border-white transition-colors"
+                />
+              </div>
+            )}
 
             <div>
               <label className="block text-xs font-semibold uppercase tracking-wider text-white mb-2">
@@ -109,32 +161,17 @@ export function LoginPage({ currentUser, onLogin, onLogout }: LoginPageProps) {
 
           <button
             type="submit"
-            className="w-full py-3 px-5 bg-white hover:bg-white/90 text-black text-base font-semibold rounded-md transition-transform active:scale-95 cursor-pointer"
+            disabled={loading}
+            className="w-full py-3 px-5 bg-white hover:bg-white/90 text-black text-base font-semibold rounded-md transition-transform active:scale-95 cursor-pointer disabled:opacity-50"
           >
-            Continue
+            {loading
+              ? "Please wait..."
+              : mode === "login"
+                ? "Log In"
+                : "Create Account"}
           </button>
         </form>
       )}
-
-      <div className="pt-6 border-t border-white/15 grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {DEMO_USERS.map((u) => {
-          const isSelected = currentUser?.id === u.id;
-          return (
-            <button
-              key={u.id}
-              type="button"
-              onClick={() => onLogin(u)}
-              className={`text-left px-4 py-3 rounded-md border text-base transition-colors active:scale-95 cursor-pointer ${
-                isSelected
-                  ? "bg-white border-white text-black font-semibold"
-                  : "bg-[#181a20] border-white/15 hover:bg-white/10 hover:border-white/40 text-white"
-              }`}
-            >
-              {u.name}
-            </button>
-          );
-        })}
-      </div>
     </div>
   );
 }

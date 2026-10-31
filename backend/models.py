@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import Column, String, Text, Time, Date, DateTime, ForeignKey, Uuid
+from sqlalchemy import Boolean, Column, String, Text, Time, Date, DateTime, ForeignKey, Uuid
 from sqlalchemy.orm import relationship
 from database import Base
 from datetime import date
@@ -29,10 +29,15 @@ class Group(Base):
     timezone = Column(String,nullable=False)
     grid_start_hour = Column(Time, nullable = False)
     grid_end_hour = Column(Time, nullable = False)
+    is_closed = Column(Boolean, default=False, nullable=False)
 
     creator = relationship("User", back_populates="groups_created")
     days = relationship("GroupDay", back_populates="group", cascade="all, delete-orphan")
     availabilities = relationship("Availability", back_populates="group", cascade="all, delete-orphan")
+
+    @property
+    def creator_name(self):
+        return self.creator.name if self.creator else None
 
 class GroupDay(Base):
 

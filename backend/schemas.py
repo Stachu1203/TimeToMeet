@@ -18,7 +18,7 @@ class UserResponse(BaseModel):
         from_attributes = True
 
 class GroupCreate(BaseModel):
-    title: str
+    title: str = Field(..., max_length=32)
     description: Optional[str] = None
     timezone: str
     grid_start_hour: time
@@ -58,12 +58,14 @@ class GroupDayResponse(BaseModel):
 class GroupResponse(BaseModel):
     id: UUID
     creator_id: UUID
+    creator_name: Optional[str] = None
     title: str
     description: Optional[str] = None
     created_at: date
     timezone: str
     grid_start_hour: time
     grid_end_hour: time
+    is_closed: bool = False
     days: list[GroupDayResponse]
 
     class Config:
@@ -73,6 +75,7 @@ class AvailabilityCreate(BaseModel):
     start_time: datetime
     end_time: datetime
     voter_name: Optional[str] = None
+    user_id: Optional[UUID] = None
 
 class AvailabilityResponse(BaseModel):
     id: UUID
@@ -103,11 +106,12 @@ class Token(BaseModel):
 
 
 class GroupUpdate(BaseModel):
-    title: Optional[str] = None
+    title: Optional[str] = Field(default=None, max_length=32)
     description: Optional[str] = None
     timezone: Optional[str] = None
     grid_start_hour: Optional[time] = None
     grid_end_hour: Optional[time] = None
+    is_closed: Optional[bool] = None
     days: Optional[list[date]] = None
     @field_validator('timezone')
     @classmethod

@@ -4,3 +4,4 @@ env/
 .env
 *.db
 node_modules/
+API_DOCUMENTATION.md

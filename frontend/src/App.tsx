@@ -1,117 +1,217 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import {
+  clearToken,
+  createGroup,
+  deleteGroup,
+  deleteMyAvailabilities,
+  fetchCurrentUser,
+  fetchGroup,
+  fetchMyGroups,
+  getToken,
+  updateGroupStatus,
+} from "./api";
 import { CreateGroupPage } from "./components/CreateGroupPage";
 import { HelpPage } from "./components/HelpPage";
 import { HomePage } from "./components/HomePage";
 import { UserIcon } from "./components/Icons";
 import { LoginPage } from "./components/LoginPage";
 import { SessionPage } from "./components/SessionPage";
-import { INITIAL_SESSIONS } from "./mockData";
 import type { GroupCreatePayload, GroupSession, PageName, User } from "./types";
 
+function getUrlSessionId(): string | null {
+  const params = new URLSearchParams(window.location.search);
+  return params.get("session") || params.get("group");
+}
+
+function setUrlSessionId(sessionId: string | null) {
+  const url = sessionId
+    ? `${window.location.pathname}?session=${sessionId}`
+    : window.location.pathname;
+  window.history.replaceState(null, "", url);
+}
+
 function App() {
-  const [sessions, setSessions] = useState<GroupSession[]>(INITIAL_SESSIONS);
+  const [sessions, setSessions] = useState<GroupSession[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [activeSessionId, setActiveSessionId] = useState<string>(
-    INITIAL_SESSIONS[0].id,
-  );
+  const [activeSession, setActiveSession] = useState<GroupSession | null>(null);
+  const [loadingSessions, setLoadingSessions] = useState(false);
+  const [sessionError, setSessionError] = useState<string | null>(null);
+  const [hasUnsavedPollChanges, setHasUnsavedPollChanges] = useState(false);
+  const [pendingPage, setPendingPage] = useState<PageName | null>(null);
 
   const [page, setPage] = useState<PageName>(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("session")) return "session";
-    return "home";
+    return getUrlSessionId() ? "session" : "home";
   });
 
-  const activeSession =
-    sessions.find((s) => s.id === activeSessionId) ?? sessions[0];
+  const refreshMyGroups = useCallback(async () => {
+    if (!getToken()) {
+      setSessions([]);
+      return;
+    }
+    setLoadingSessions(true);
+    try {
+      const myGroups = await fetchMyGroups();
+      setSessions(myGroups);
+    } catch {
+      setSessions([]);
+    } finally {
+      setLoadingSessions(false);
+    }
+  }, []);
 
-  const handleOpenSession = (sessionId: string) => {
-    setActiveSessionId(sessionId);
-    setPage("session");
-  };
+  useEffect(() => {
+    let cancelled = false;
 
-  const handleLogin = (user: User) => {
-    setCurrentUser(user);
-    setPage("home");
-  };
+    async function init() {
+      const urlSessionId = getUrlSessionId();
+      const token = getToken();
 
-  const handleCreateGroup = (
-    payload: GroupCreatePayload,
-    creatorOverride?: User,
-  ) => {
-    const newId = crypto.randomUUID
-      ? crypto.randomUUID()
-      : `session-${Date.now()}`;
+      if (token) {
+        try {
+          const user = await fetchCurrentUser();
+          if (!cancelled) {
+            setCurrentUser(user);
+          }
+          const myGroups = await fetchMyGroups();
+          if (!cancelled) {
+            setSessions(myGroups);
+          }
+        } catch {
+          clearToken();
+          if (!cancelled) {
+            setCurrentUser(null);
+            setSessions([]);
+          }
+        }
+      }
 
-    const creator = creatorOverride ??
-      currentUser ?? {
-        id: "u-admin",
-        name: "Organizer",
-      };
+      if (urlSessionId) {
+        try {
+          const grp = await fetchGroup(urlSessionId);
+          if (!cancelled) {
+            setActiveSession(grp);
+            setSessionError(null);
+            setPage("session");
+          }
+        } catch (err) {
+          if (!cancelled) {
+            setSessionError(
+              err instanceof Error ? err.message : "Poll not found.",
+            );
+          }
+        }
+      }
+    }
 
-    const todayStr = new Date().toISOString().slice(0, 10);
-
-    const newSession: GroupSession = {
-      id: newId,
-      creator_id: creator.id,
-      title: payload.title,
-      created_at: todayStr,
-      timezone: payload.timezone,
-      grid_start_hour: payload.grid_start_hour,
-      grid_end_hour: payload.grid_end_hour,
-      days: payload.dates.map((d, idx) => ({
-        id: `${newId}-day-${idx}`,
-        group_id: newId,
-        date: d,
-      })),
-      participants: [creator],
-      userSlots: {
-        [creator.id]: [],
-      },
+    init();
+    return () => {
+      cancelled = true;
     };
+  }, []);
 
-    setSessions((prev) => [newSession, ...prev]);
-    setActiveSessionId(newId);
+  const performNavigate = (nextPage: PageName) => {
+    setPendingPage(null);
+    setHasUnsavedPollChanges(false);
+    if (nextPage !== "session") {
+      setUrlSessionId(null);
+      setSessionError(null);
+    }
+    setPage(nextPage);
+  };
+
+  const navigateTo = (nextPage: PageName) => {
+    if (page === "session" && hasUnsavedPollChanges && nextPage !== "session") {
+      setPendingPage(nextPage);
+      return;
+    }
+    performNavigate(nextPage);
+  };
+
+  const handleOpenSession = async (sessionId: string) => {
+    setSessionError(null);
+    setUrlSessionId(sessionId);
+    const existing = sessions.find((s) => s.id === sessionId);
+    if (existing) {
+      setActiveSession(existing);
+      setPage("session");
+    }
+    try {
+      const fresh = await fetchGroup(sessionId);
+      setActiveSession(fresh);
+      setPage("session");
+    } catch (err) {
+      setSessionError(
+        err instanceof Error ? err.message : "Failed to load poll.",
+      );
+      setPage("session");
+    }
+  };
+
+  const handleLogin = async (user: User) => {
+    setCurrentUser(user);
+    await refreshMyGroups();
+    if (activeSession && getUrlSessionId()) {
+      setPage("session");
+    } else {
+      navigateTo("home");
+    }
+  };
+
+  const handleLogout = () => {
+    clearToken();
+    setCurrentUser(null);
+    setSessions([]);
+    navigateTo("login");
+  };
+
+  const handleCreateGroup = async (payload: GroupCreatePayload) => {
+    const created = await createGroup(payload);
+    await refreshMyGroups();
+    setActiveSession(created);
+    setUrlSessionId(created.id);
     setPage("session");
   };
 
-  const handleSaveUserSlots = (
-    sessionId: string,
-    user: User,
-    slots: string[],
-  ) => {
-    setSessions((prev) =>
-      prev.map((s) => {
-        if (s.id !== sessionId) return s;
-        const exists = s.participants.some((p) => p.id === user.id);
-        const updatedParticipants = exists
-          ? s.participants
-          : [...s.participants, user];
-
-        return {
-          ...s,
-          participants: updatedParticipants,
-          userSlots: {
-            ...s.userSlots,
-            [user.id]: slots,
-          },
-        };
-      }),
-    );
+  const handleQuitSession = async (sessionId: string) => {
+    try {
+      await deleteMyAvailabilities(sessionId);
+      await refreshMyGroups();
+      if (activeSession?.id === sessionId) {
+        setActiveSession(null);
+        navigateTo("home");
+      }
+    } catch {
+      await refreshMyGroups();
+    }
   };
 
-  const handleClearUserSlots = (sessionId: string, userId: string) => {
-    setSessions((prev) =>
-      prev.map((s) => {
-        if (s.id !== sessionId) return s;
-        return {
-          ...s,
-          userSlots: {
-            ...s.userSlots,
-            [userId]: [],
-          },
-        };
-      }),
-    );
+  const handleDeleteSession = async (sessionId: string) => {
+    try {
+      await deleteGroup(sessionId);
+      await refreshMyGroups();
+      if (activeSession?.id === sessionId) {
+        setActiveSession(null);
+        navigateTo("home");
+      }
+    } catch {
+      await refreshMyGroups();
+    }
+  };
+
+  const handleToggleCloseSession = async (
+    sessionId: string,
+    isClosed: boolean,
+  ) => {
+    try {
+      await fetchGroup(sessionId);
+      const updated = await updateGroupStatus(sessionId, isClosed);
+      await refreshMyGroups();
+      if (activeSession?.id === sessionId) {
+        setActiveSession(updated);
+      }
+    } catch {
+      await refreshMyGroups();
+    }
   };
 
   return (
@@ -120,7 +220,7 @@ function App() {
         <div className="w-full max-w-[1800px] mx-auto px-6 lg:px-12 h-20 flex items-center justify-between gap-4">
           <button
             type="button"
-            onClick={() => setPage("home")}
+            onClick={() => navigateTo("home")}
             className="font-brand text-3xl text-white cursor-pointer tracking-wide"
           >
             TimeToMeet
@@ -140,7 +240,7 @@ function App() {
                 <button
                   key={item.id}
                   type="button"
-                  onClick={() => setPage(item.id)}
+                  onClick={() => navigateTo(item.id)}
                   className={`py-1.5 text-base font-medium text-white transition-colors cursor-pointer border-b-2 ${
                     active
                       ? "border-[#4a628a]"
@@ -155,7 +255,7 @@ function App() {
 
           <button
             type="button"
-            onClick={() => setPage("login")}
+            onClick={() => navigateTo("login")}
             className="inline-flex items-center gap-2 py-2 text-base font-medium text-white hover:opacity-80 transition-opacity cursor-pointer"
           >
             <UserIcon className="w-5 h-5" />
@@ -168,8 +268,13 @@ function App() {
         {page === "home" && (
           <HomePage
             sessions={sessions}
+            currentUser={currentUser}
+            loading={loadingSessions}
             onOpenSession={handleOpenSession}
-            onNavigate={setPage}
+            onQuitSession={handleQuitSession}
+            onDeleteSession={handleDeleteSession}
+            onToggleCloseSession={handleToggleCloseSession}
+            onNavigate={navigateTo}
           />
         )}
 
@@ -177,31 +282,56 @@ function App() {
           <LoginPage
             currentUser={currentUser}
             onLogin={handleLogin}
-            onLogout={() => setCurrentUser(null)}
+            onLogout={handleLogout}
           />
         )}
 
         {page === "create" && (
           <CreateGroupPage
             currentUser={currentUser}
-            onSelectUser={setCurrentUser}
-            onOpenLogin={() => setPage("login")}
+            onOpenLogin={() => navigateTo("login")}
             onCreateGroup={handleCreateGroup}
-            onCancel={() => setPage("home")}
           />
         )}
 
         {page === "session" && (
-          <SessionPage
-            key={`${activeSession.id}-${currentUser?.id ?? "guest"}`}
-            session={activeSession}
-            currentUser={currentUser}
-            onSelectUser={setCurrentUser}
-            onSaveUserSlots={handleSaveUserSlots}
-            onClearUserSlots={handleClearUserSlots}
-            onOpenLogin={() => setPage("login")}
-            onBack={() => setPage("home")}
-          />
+          <>
+            {sessionError ? (
+              <div className="max-w-xl mx-auto p-6 rounded-md bg-[#181a20] border border-white/25 space-y-4">
+                <div className="text-lg font-semibold text-white">
+                  {sessionError}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => navigateTo("home")}
+                  className="px-4 py-2 text-sm font-semibold bg-white text-black rounded-md cursor-pointer"
+                >
+                  Back to My Polls
+                </button>
+              </div>
+            ) : activeSession ? (
+              <SessionPage
+                key={`${activeSession.id}-${currentUser?.id ?? "guest"}`}
+                session={activeSession}
+                currentUser={currentUser}
+                onOpenLogin={() => performNavigate("login")}
+                onBack={() => performNavigate("home")}
+                onQuitSession={handleQuitSession}
+                onDeleteSession={handleDeleteSession}
+                onToggleCloseSession={handleToggleCloseSession}
+                onSessionSync={setActiveSession}
+                onSessionUpdated={refreshMyGroups}
+                onUnsavedChangesChange={setHasUnsavedPollChanges}
+                pendingNavigationPage={pendingPage}
+                onConfirmPendingNavigation={performNavigate}
+                onCancelPendingNavigation={() => setPendingPage(null)}
+              />
+            ) : (
+              <div className="p-8 rounded-md bg-[#181a20] border border-white/15 text-base text-white">
+                Loading poll...
+              </div>
+            )}
+          </>
         )}
 
         {page === "help" && <HelpPage />}

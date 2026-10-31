@@ -1,17 +1,15 @@
 import { useState } from "react";
-import { DEMO_USERS } from "../mockData";
-import type { User } from "../types";
 
 interface IdentityModalProps {
   title: string;
-  onSelectUser: (user: User) => void;
+  onSelectGuestName: (guestName: string) => void;
   onGoToLogin: () => void;
   onClose?: () => void;
 }
 
 export function IdentityModal({
   title,
-  onSelectUser,
+  onSelectGuestName,
   onGoToLogin,
   onClose,
 }: IdentityModalProps) {
@@ -26,18 +24,8 @@ export function IdentityModal({
       return;
     }
 
-    const existingDemo = DEMO_USERS.find(
-      (u) => u.name.toLowerCase() === trimmed.toLowerCase(),
-    );
-
-    const user: User = existingDemo ?? {
-      id: `guest-${trimmed.toLowerCase().replace(/\s+/g, "-")}`,
-      name: trimmed,
-      email: null,
-    };
-
     setError("");
-    onSelectUser(user);
+    onSelectGuestName(trimmed);
   };
 
   return (
@@ -59,14 +47,14 @@ export function IdentityModal({
         <form onSubmit={handleGuestSubmit} className="space-y-4">
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-white mb-2">
-              Continue as Guest
+              Vote as Guest (No Account Token)
             </label>
             <input
               type="text"
               autoFocus
               value={guestName}
               onChange={(e) => setGuestName(e.target.value)}
-              placeholder="Enter your name or nickname"
+              placeholder="Enter your guest nickname"
               className="w-full px-4 py-3 text-base bg-[#121318] text-white placeholder:text-white/40 border border-white/20 rounded-md focus:outline-none focus:border-white transition-colors"
             />
           </div>
@@ -87,14 +75,14 @@ export function IdentityModal({
 
         <div className="pt-4 border-t border-white/15 space-y-3">
           <div className="text-xs font-semibold uppercase tracking-wider text-white">
-            Or have an account?
+            Or sign in with an account
           </div>
           <button
             type="button"
             onClick={onGoToLogin}
             className="w-full py-2.5 px-4 bg-[#121318] hover:bg-white/10 text-white border border-white/20 text-sm font-semibold rounded-md transition-transform active:scale-95 cursor-pointer"
           >
-            Go to Log In
+            Go to Log In / Register
           </button>
         </div>
       </div>

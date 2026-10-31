@@ -1,4 +1,5 @@
 from fastapi import FastAPI,Depends,HTTPException
+from typing import Optional
 from sqlalchemy.orm import Session
 from fastapi.security import OAuth2PasswordRequestForm
 import models
@@ -9,9 +10,15 @@ from logic import *
 from uuid import UUID
 from auth import pwd_context,get_current_user,create_access_token,get_optional_current_user
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import or_
+from sqlalchemy import or_, text
 
 models.Base.metadata.create_all(bind=engine)
+with engine.connect() as conn:
+    try:
+        conn.execute(text("ALTER TABLE groups ADD COLUMN is_closed BOOLEAN NOT NULL DEFAULT 0"))
+        conn.commit()
+    except Exception:
+        pass
 
 app = FastAPI()
 
@@ -58,6 +65,9 @@ def create_availability(availabilities: list[schemas.AvailabilityCreate],group_i
     if not group:
         raise HTTPException(status_code=404, detail="Grupa nie istnieje")
 
+    if group.is_closed:
+        raise HTTPException(status_code=400, detail="Ankieta jest zamknięta")
+
     if not availabilities:
         raise HTTPException(status_code=400, detail="Lista dostępności nie może być pusta")
 
@@ -74,9 +84,23 @@ def create_availability(availabilities: list[schemas.AvailabilityCreate],group_i
         guest_name = availabilities[0].voter_name
         if not guest_name or not guest_name.strip():
             raise HTTPException(status_code=400, detail="Goście muszą podać imię (voter_name)")
-        guest_user = models.User(name=guest_name.strip())
-        db.add(guest_user)
-        db.flush()  
+        existing_guest_id = availabilities[0].user_id
+        guest_user = None
+        if existing_guest_id:
+            guest_user = db.query(models.User).filter(
+                models.User.id == existing_guest_id,
+                models.User.email.is_(None)
+            ).first()
+        if guest_user:
+            guest_user.name = guest_name.strip()
+            db.query(models.Availability).filter(
+                models.Availability.group_id == group_id,
+                models.Availability.user_id == guest_user.id
+            ).delete()
+        else:
+            guest_user = models.User(name=guest_name.strip())
+            db.add(guest_user)
+            db.flush()
         voter_id = guest_user.id
         voter_name = guest_user.name
 
@@ -202,7 +226,7 @@ def get_my_groups(db: Session = Depends(get_db), current_user: models.User = Dep
             models.Group.creator_id == current_user.id,
             models.Group.id.in_(participated_group_ids)
         )
-    ).all()
+    ).order_by(models.Group.created_at.desc(), text("groups.rowid DESC")).all()
 
     return groups
 
@@ -240,16 +264,21 @@ def get_my_availabilities(
 @app.delete("/groups/{group_id}/availabilities", status_code=204)
 def delete_my_availabilities(
     group_id: UUID,
+    guest_user_id: Optional[UUID] = None,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_user)
+    current_user: Optional[models.User] = Depends(get_optional_current_user)
 ):
     group = db.query(models.Group).filter(models.Group.id == group_id).first()
     if not group:
         raise HTTPException(status_code=404, detail="Grupa nie istnieje")
 
+    target_user_id = current_user.id if current_user else guest_user_id
+    if not target_user_id:
+        raise HTTPException(status_code=401, detail="Brak autoryzacji")
+
     db.query(models.Availability).filter(
         models.Availability.group_id == group_id,
-        models.Availability.user_id == current_user.id
+        models.Availability.user_id == target_user_id
     ).delete()
     db.commit()
 
@@ -315,3 +344,49 @@ def get_group_availabilities(group_id: UUID, db: Session = Depends(get_db)):
     return db.query(models.Availability).filter(
         models.Availability.group_id == group_id
     ).all()
+
+
+@app.delete("/groups/{group_id}/participants/{user_id}", status_code=204)
+def remove_participant(
+    group_id: UUID,
+    user_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    group = db.query(models.Group).filter(models.Group.id == group_id).first()
+    if not group:
+        raise HTTPException(status_code=404, detail="Grupa nie istnieje")
+
+    if group.creator_id != current_user.id and user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Brak uprawnień do usunięcia uczestnika")
+
+    db.query(models.Availability).filter(
+        models.Availability.group_id == group_id,
+        models.Availability.user_id == user_id
+    ).delete()
+    db.commit()
+
+
+@app.delete("/groups/{group_id}/availabilities/{availability_id}", status_code=204)
+def delete_availability_window(
+    group_id: UUID,
+    availability_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    group = db.query(models.Group).filter(models.Group.id == group_id).first()
+    if not group:
+        raise HTTPException(status_code=404, detail="Grupa nie istnieje")
+
+    av = db.query(models.Availability).filter(
+        models.Availability.id == availability_id,
+        models.Availability.group_id == group_id
+    ).first()
+    if not av:
+        raise HTTPException(status_code=404, detail="Przedział czasowy nie istnieje")
+
+    if group.creator_id != current_user.id and av.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Brak uprawnień do usunięcia przedziału czasowego")
+
+    db.delete(av)
+    db.commit()
