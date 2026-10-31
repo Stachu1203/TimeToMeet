@@ -220,7 +220,7 @@ export function SessionPage({
               className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[#1a1c23] hover:bg-white/10 border border-white/20 rounded-md transition-transform active:scale-95 cursor-pointer"
             >
               <TrashIcon className="w-4 h-4" />
-              <span>Clear</span>
+              <span>Delete my choices</span>
             </button>
           )}
 
@@ -295,7 +295,7 @@ export function SessionPage({
                     return (
                       <td
                         key={slotKey}
-                        className={`p-0 border border-white/20 ${
+                        className={`p-0 border border-white/10 ${
                           isFullHour ? "border-t-2 border-t-white/55" : ""
                         }`}
                       >
@@ -323,10 +323,6 @@ export function SessionPage({
                           >
                             {isMine && <CheckIcon className="w-5 h-5" />}
                           </div>
-
-                          <span className="relative z-10 text-xs sm:text-sm font-mono font-bold text-white">
-                            {count > 0 ? `${count}/${totalParticipants}` : ""}
-                          </span>
                         </div>
                       </td>
                     );
