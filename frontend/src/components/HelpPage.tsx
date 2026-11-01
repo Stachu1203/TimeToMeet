@@ -2,23 +2,23 @@ export function HelpPage() {
   const steps = [
     {
       step: "01",
-      title: "Sign In or Switch Participant",
-      body: "First step.",
+      title: "Create or Join a Poll",
+      body: "Sign in to create a new poll, select calendar dates, and set the daily time window and timezone. Participants opening a shared link can vote immediately as a guest or sign in.",
     },
     {
       step: "02",
-      title: "Create a New Meeting Poll",
-      body: "lorem ipsum.",
+      title: "Vote on Availability",
+      body: "Switch to Vote mode and click or drag across the grid to select your available hours. You only see your own choices until you click 'Save my choices' to submit them to the group.",
     },
     {
       step: "03",
-      title: "Vote & Inspect Participants on Hover",
-      body: "third step.",
+      title: "Inspect Group Overlap",
+      body: "Inspect mode displays the combined heatmap. Hover over slots to see who is available, click a slot for detailed windows, or click any participant's badge to highlight their availability.",
     },
     {
       step: "04",
-      title: "Read the Progress Bar & Joined Matching Windows",
-      body: "test.",
+      title: "Review Matches & Finalize",
+      body: "Matching dates appear below the calendar. Organizers can close the poll under 'Poll Options' to lock voting and view ranked Best Matches alongside the final calendar.",
     },
   ];
 

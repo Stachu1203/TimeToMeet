@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import type { GroupCreatePayload, User } from '../types';
-import { ChevronLeftIcon, ChevronRightIcon } from './Icons';
+import { useState } from "react";
+import type { GroupCreatePayload, User } from "../types";
+import { ChevronLeftIcon, ChevronRightIcon } from "./Icons";
 
 interface CreateGroupPageProps {
   currentUser: User | null;
@@ -9,20 +9,20 @@ interface CreateGroupPageProps {
 }
 
 const HOURS = Array.from({ length: 24 }, (_, i) => {
-  const hh = String(i).padStart(2, '0');
+  const hh = String(i).padStart(2, "0");
   return { value: `${hh}:00:00`, label: `${hh}:00` };
 });
 
 const TIMEZONES = [
-  'Europe/Warsaw',
-  'UTC',
-  'Europe/London',
-  'Europe/Berlin',
-  'America/New_York',
-  'America/Los_Angeles',
+  "Europe/Warsaw",
+  "UTC",
+  "Europe/London",
+  "Europe/Berlin",
+  "America/New_York",
+  "America/Los_Angeles",
 ];
 
-const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const MAX_DAYS = 60;
 const MAX_TITLE_LENGTH = 32;
 
@@ -31,12 +31,12 @@ export function CreateGroupPage({
   onOpenLogin,
   onCreateGroup,
 }: CreateGroupPageProps) {
-  const [title, setTitle] = useState('');
-  const [timezone, setTimezone] = useState('Europe/Warsaw');
-  const [gridStartHour, setGridStartHour] = useState('09:00:00');
-  const [gridEndHour, setGridEndHour] = useState('17:00:00');
+  const [title, setTitle] = useState("");
+  const [timezone, setTimezone] = useState("Europe/Warsaw");
+  const [gridStartHour, setGridStartHour] = useState("09:00:00");
+  const [gridEndHour, setGridEndHour] = useState("17:00:00");
   const [selectedDates, setSelectedDates] = useState<string[]>([]);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   const [viewYear, setViewYear] = useState(2026);
@@ -48,7 +48,8 @@ export function CreateGroupPage({
         <div className="p-8 rounded-md bg-[#181a20] border border-white/20 space-y-5 text-white">
           <h1 className="text-3xl font-semibold">Sign In Required</h1>
           <p className="text-base text-white">
-            Only logged-in users can create new polls. Please sign in or create an account to continue.
+            Only logged-in users can create new polls. Please sign in or create
+            an account to continue.
           </p>
           <div className="flex items-center gap-3 pt-2">
             <button
@@ -64,10 +65,13 @@ export function CreateGroupPage({
     );
   }
 
-  const monthName = new Date(viewYear, viewMonth, 1).toLocaleDateString('en-US', {
-    month: 'long',
-    year: 'numeric',
-  });
+  const monthName = new Date(viewYear, viewMonth, 1).toLocaleDateString(
+    "en-US",
+    {
+      month: "long",
+      year: "numeric",
+    },
+  );
 
   const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
   const firstDayOfWeek = new Date(viewYear, viewMonth, 1).getDay();
@@ -92,14 +96,14 @@ export function CreateGroupPage({
   const toggleDate = (dateStr: string) => {
     setSelectedDates((prev) => {
       if (prev.includes(dateStr)) {
-        setError('');
+        setError("");
         return prev.filter((d) => d !== dateStr);
       }
       if (prev.length >= MAX_DAYS) {
         setError(`You can select up to ${MAX_DAYS} days maximum.`);
         return prev;
       }
-      setError('');
+      setError("");
       return [...prev, dateStr].sort();
     });
   };
@@ -126,7 +130,7 @@ export function CreateGroupPage({
     e.preventDefault();
     const trimmedTitle = title.trim();
     if (!trimmedTitle) {
-      setError('Please enter a meeting title.');
+      setError("Please enter a meeting title.");
       return;
     }
     if (trimmedTitle.length > MAX_TITLE_LENGTH) {
@@ -134,15 +138,15 @@ export function CreateGroupPage({
       return;
     }
     if (selectedDates.length === 0) {
-      setError('Please select at least one day on the calendar.');
+      setError("Please select at least one day on the calendar.");
       return;
     }
     if (gridStartHour >= gridEndHour) {
-      setError('Start time must be earlier than end time.');
+      setError("Start time must be earlier than end time.");
       return;
     }
 
-    setError('');
+    setError("");
     setSubmitting(true);
     try {
       await onCreateGroup({
@@ -153,14 +157,17 @@ export function CreateGroupPage({
         days: selectedDates,
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create poll.');
+      setError(err instanceof Error ? err.message : "Failed to create poll.");
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="w-full max-w-5xl mx-auto space-y-6 sm:space-y-8">
+    <form
+      onSubmit={handleSubmit}
+      className="w-full max-w-5xl mx-auto space-y-6 sm:space-y-8"
+    >
       <div className="flex items-end justify-between gap-4 border-b border-white/15 pb-5">
         <h1 className="text-2xl sm:text-4xl font-semibold tracking-tight text-white">
           Create Poll
@@ -185,7 +192,7 @@ export function CreateGroupPage({
           maxLength={MAX_TITLE_LENGTH}
           value={title}
           onChange={(e) => setTitle(e.target.value.slice(0, MAX_TITLE_LENGTH))}
-          placeholder="Sprint Planning"
+          placeholder="Meeting name"
           className="w-full px-4 py-3 text-base bg-[#181a20] text-white placeholder:text-white/40 border border-white/20 rounded-md focus:outline-none focus:border-white transition-colors"
         />
       </div>
@@ -246,30 +253,27 @@ export function CreateGroupPage({
                     );
                   }
 
-                  const mm = String(viewMonth + 1).padStart(2, '0');
-                  const dd = String(dayNum).padStart(2, '0');
+                  const mm = String(viewMonth + 1).padStart(2, "0");
+                  const dd = String(dayNum).padStart(2, "0");
                   const dateStr = `${viewYear}-${mm}-${dd}`;
                   const isSelected = selectedDates.includes(dateStr);
 
                   return (
-                    <td
-                      key={dateStr}
-                      className="border border-white/20 p-0"
-                    >
+                    <td key={dateStr} className="border border-white/20 p-0">
                       <button
                         type="button"
                         aria-pressed={isSelected}
-                        aria-label={`${dateStr}${isSelected ? ' (selected)' : ''}`}
+                        aria-label={`${dateStr}${isSelected ? " (selected)" : ""}`}
                         onClick={() => toggleDate(dateStr)}
                         className={`relative overflow-hidden w-full h-12 sm:h-16 md:h-20 text-base sm:text-lg transition-all duration-200 cursor-pointer flex items-center justify-center bg-[#181a20] hover:bg-white/10 text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white ${
-                          isSelected ? 'font-semibold' : ''
+                          isSelected ? "font-semibold" : ""
                         }`}
                       >
                         <span
                           className={`absolute inset-0 bg-[#3b5278] transition-all duration-250 ease-out ${
                             isSelected
-                              ? 'opacity-100 scale-100'
-                              : 'opacity-0 scale-75'
+                              ? "opacity-100 scale-100"
+                              : "opacity-0 scale-75"
                           }`}
                         />
                         {isSelected && (
@@ -351,7 +355,11 @@ export function CreateGroupPage({
                 className="w-full px-4 py-3 text-base bg-[#181a20] text-white border border-white/20 rounded-md focus:outline-none focus:border-white transition-colors"
               >
                 {TIMEZONES.map((tz) => (
-                  <option key={tz} value={tz} className="bg-[#181a20] text-white">
+                  <option
+                    key={tz}
+                    value={tz}
+                    className="bg-[#181a20] text-white"
+                  >
                     {tz}
                   </option>
                 ))}
@@ -363,7 +371,7 @@ export function CreateGroupPage({
               disabled={submitting}
               className="w-full py-3 px-5 bg-white hover:bg-white/90 text-black text-base font-semibold rounded-md transition-transform active:scale-95 cursor-pointer disabled:opacity-50"
             >
-              {submitting ? 'Creating...' : 'Create Poll'}
+              {submitting ? "Creating..." : "Create Poll"}
             </button>
           </div>
 

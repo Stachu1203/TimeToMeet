@@ -143,7 +143,7 @@ export function LoginPage({ currentUser, onLogin, onLogout }: LoginPageProps) {
                   autoComplete="name"
                   value={nickname}
                   onChange={(e) => setNickname(e.target.value)}
-                  placeholder="Alice Nowak"
+                  placeholder="Username"
                   className="w-full px-4 py-3 text-base bg-[#181a20] text-white placeholder:text-white/40 border border-white/20 rounded-md focus:outline-none focus:border-white transition-colors"
                 />
               </div>
