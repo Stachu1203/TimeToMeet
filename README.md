@@ -3,7 +3,6 @@
 **TimeToMeet** to aplikacja webowa (inspirowana *LettuceMeet*) służąca do szybkiego i wygodnego ustalania wspólnego terminu spotkania dla grupy osób. Uczestnicy zaznaczają swoją dostępność na interaktywnej siatce 30-minutowych bloków czasowych, a aplikacja w czasie rzeczywistym generuje **heatmapę** pokazującą, w których godzinach pasuje największej liczbie osób.
 
 <p align="center">
-  <!-- Tutaj wstaw ścieżkę lub link do swojego pliku GIF, np. ./demo.gif -->
   <img src="./demo.gif" alt="TimeToMeet – pokaz działania aplikacji" width="100%" />
 </p>
 
