@@ -88,7 +88,7 @@ export function computeParticipantsAndSlots(
 
   for (const block of availabilities) {
     const uid = block.user_id;
-    const uname = block.voter_name || "Participant";
+    const uname = activeVoterId && uid === activeVoterId && activeVoterName ? activeVoterName : block.voter_name || "Participant";
     if (!pMap.has(uid)) {
       pMap.set(uid, { id: uid, name: uname });
     }

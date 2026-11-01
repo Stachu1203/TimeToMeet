@@ -375,6 +375,39 @@ export function useSessionData({
     }
   };
 
+  const handleChangeGuestName = async (newName: string) => {
+    const trimmed = newName.trim();
+    if (!trimmed) return;
+    const prevName = guestName;
+    setGuestName(trimmed);
+
+    if (
+      prevName &&
+      prevName !== trimmed &&
+      guestUserId &&
+      serverVoterSlots.size > 0
+    ) {
+      setSaving(true);
+      setStatusMessage(null);
+      try {
+        const blocks = slotsToAvailabilityPayloads(
+          Array.from(serverVoterSlots).sort(),
+          trimmed,
+          guestUserId,
+        );
+        await saveAvailabilities(session.id, blocks, true);
+        await loadSessionData(false);
+        onSessionUpdated?.();
+      } catch (err) {
+        setStatusMessage(
+          err instanceof Error ? err.message : "Failed to update guest name.",
+        );
+      } finally {
+        setSaving(false);
+      }
+    }
+  };
+
   return {
     initialLoaded,
     mySlots,
@@ -407,5 +440,6 @@ export function useSessionData({
     handleClearMine,
     handleRemoveParticipant,
     handleRemoveTimeWindow,
+    handleChangeGuestName,
   };
 }

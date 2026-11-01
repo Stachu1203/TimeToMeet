@@ -97,8 +97,8 @@ export function SessionPage({
     statusMessage,
     setStatusMessage,
     guestName,
-    setGuestName,
-    setGuestUserId,
+    handleChangeGuestName,
+
     activeVoterId,
     participants,
     userSlotsMap,
@@ -344,10 +344,7 @@ export function SessionPage({
   };
 
   const handleGuestConfirm = (chosenGuestName: string) => {
-    if (chosenGuestName !== guestName) {
-      setGuestUserId(null);
-    }
-    setGuestName(chosenGuestName);
+    void handleChangeGuestName(chosenGuestName);
     setShowIdentityModal(false);
     if (pendingSlotKey) {
       const next = new Set(mySlots);
