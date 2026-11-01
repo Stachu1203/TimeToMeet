@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useRef } from "react";
 import { addMinutesToSlotKey, formatShortDate, makeSlotKey } from "../../Utils";
 import type { AvailabilityBlock, GroupSession, User } from "../../types";
 import { TrashIcon } from "../Icons";
@@ -159,116 +159,167 @@ export const ScheduleTable = React.memo(function ScheduleTable({
   onTouchSlotMove,
   onMouseLeave,
 }: ScheduleTableProps) {
-  return (
-    <div
-      ref={scrollContainerRef}
-      className="w-full overflow-x-auto"
-      onMouseLeave={onMouseLeave}
-      onTouchMove={
-        readOnly || !onTouchSlotMove
-          ? undefined
-          : (e) => {
-              const touch = e.touches[0];
-              if (!touch) return;
-              const el = document
-                .elementFromPoint(touch.clientX, touch.clientY)
-                ?.closest<HTMLElement>("[data-slot-key]");
-              const key = el?.dataset.slotKey;
-              if (key) {
-                onTouchSlotMove(key);
-              }
-            }
-      }
-    >
-      <table
-        style={
-          {
-            "--mobile-table-min-w": `${session.days.length * 68 + 56}px`,
-            "--desktop-table-min-w": `${Math.max(
-              680,
-              session.days.length * 110 + 80,
-            )}px`,
-          } as React.CSSProperties
-        }
-        className="w-full min-w-[var(--mobile-table-min-w)] md:min-w-[var(--desktop-table-min-w)] select-none border-collapse table-fixed"
-      >
-        <thead>
-          <tr>
-            <th
-              title={session.timezone}
-              className="sticky left-0 z-30 bg-[#121318] w-14 md:w-20 pb-2 md:pb-3 pr-1.5 md:pr-4 text-right text-[11px] md:text-sm font-mono font-bold text-white"
-            >
-              {session.timezone}
-            </th>
-            {session.days.map((day) => {
-              const { weekday, monthDay } = formatShortDate(day.date);
-              return (
-                <th
-                  key={day.id}
-                  className="pb-2 md:pb-3 px-1 md:px-2 text-center border-b-2 border-white/50"
-                >
-                  <div className="text-xs sm:text-sm md:text-base font-semibold text-white">
-                    {weekday}
-                  </div>
-                  <div className="text-[11px] sm:text-xs md:text-sm font-medium text-white">
-                    {monthDay}
-                  </div>
-                </th>
-              );
-            })}
-          </tr>
-        </thead>
-        <tbody>
-          {timeLabels.map((timeStr) => {
-            const isFullHour = timeStr.endsWith(":00");
-            return (
-              <tr key={timeStr}>
-                <td className="sticky left-0 z-30 bg-[#121318] pr-1.5 md:pr-4 text-right align-top -translate-y-2 text-xs md:text-sm text-white font-mono font-bold">
-                  {isFullHour ? timeStr : ""}
-                </td>
-                {session.days.map((day) => {
-                  const slotKey = makeSlotKey(day.date, timeStr);
-                  const count = heatmapCounts[slotKey] ?? 0;
-                  const isMine = mySlots.has(slotKey);
-                  const isFullMatch =
-                    count === totalParticipants && totalParticipants > 0;
-                  const isHighlightedUserHere = highlightedUserId
-                    ? Boolean(userSlotsMap[highlightedUserId]?.has(slotKey))
-                    : false;
-                  const highlightedColor = highlightedUserId
-                    ? assignedColors.get(highlightedUserId)
-                    : undefined;
-                  const isInspectedSlot = selectedSlot === slotKey;
+  const headerScrollRef = useRef<HTMLDivElement>(null);
 
+  const tableMinWidthStyle = {
+    "--mobile-table-min-w": `${session.days.length * 68 + 56}px`,
+    "--desktop-table-min-w": `${Math.max(680, session.days.length * 110 + 80)}px`,
+  } as React.CSSProperties;
+
+  const handleBodyScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const left = e.currentTarget.scrollLeft;
+    if (
+      headerScrollRef.current &&
+      headerScrollRef.current.scrollLeft !== left
+    ) {
+      headerScrollRef.current.scrollLeft = left;
+    }
+  };
+
+  const handleHeaderScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const left = e.currentTarget.scrollLeft;
+    if (
+      scrollContainerRef.current &&
+      scrollContainerRef.current.scrollLeft !== left
+    ) {
+      scrollContainerRef.current.scrollLeft = left;
+    }
+  };
+
+  return (
+    <div className="w-full" onMouseLeave={onMouseLeave}>
+      <div className="sticky top-0 z-30 bg-[#121318] pt-2">
+        <div
+          ref={headerScrollRef}
+          onScroll={handleHeaderScroll}
+          className="w-full overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
+          <table
+            style={tableMinWidthStyle}
+            className="w-full min-w-[var(--mobile-table-min-w)] md:min-w-[var(--desktop-table-min-w)] select-none border-collapse table-fixed"
+          >
+            <colgroup>
+              <col className="w-14 md:w-20" />
+              {session.days.map((day) => (
+                <col key={day.id} />
+              ))}
+            </colgroup>
+            <thead>
+              <tr>
+                <th
+                  title={session.timezone}
+                  className="sticky left-0 z-20 bg-[#121318] w-14 md:w-20 pb-2 md:pb-3 pr-1.5 md:pr-4 text-right text-[11px] md:text-sm font-mono font-bold text-white border-b-2 border-transparent"
+                >
+                  {session.timezone}
+                </th>
+                {session.days.map((day) => {
+                  const { weekday, monthDay } = formatShortDate(day.date);
                   return (
-                    <ScheduleCell
-                      key={slotKey}
-                      slotKey={slotKey}
-                      dayDate={day.date}
-                      timeStr={timeStr}
-                      isFullHour={isFullHour}
-                      count={count}
-                      totalParticipants={totalParticipants}
-                      isMine={isMine}
-                      showOnlyMine={showOnlyMine}
-                      isFullMatch={isFullMatch}
-                      isHighlightedUserHere={isHighlightedUserHere}
-                      highlightedColor={highlightedColor}
-                      highlightedUserId={highlightedUserId}
-                      isInspectedSlot={isInspectedSlot}
-                      readOnly={readOnly}
-                      onMouseDown={onCellMouseDown}
-                      onMouseEnter={onCellMouseEnter}
-                      onMouseMove={onCellMouseMove}
-                      onKeyToggle={onCellKeyToggle}
-                    />
+                    <th
+                      key={day.id}
+                      className="pb-2 md:pb-3 px-1 md:px-2 text-center border-b-2 border-white/50 bg-[#121318]"
+                    >
+                      <div className="text-xs sm:text-sm md:text-base font-semibold text-white">
+                        {weekday}
+                      </div>
+                      <div className="text-[11px] sm:text-xs md:text-sm font-medium text-white">
+                        {monthDay}
+                      </div>
+                    </th>
                   );
                 })}
               </tr>
-            );
-          })}
-        </tbody>
-      </table>
+            </thead>
+          </table>
+        </div>
+      </div>
+
+      <div
+        ref={scrollContainerRef}
+        onScroll={handleBodyScroll}
+        className="w-full overflow-x-auto"
+        onTouchMove={
+          readOnly || !onTouchSlotMove
+            ? undefined
+            : (e) => {
+                const touch = e.touches[0];
+                if (!touch) return;
+                const el = document
+                  .elementFromPoint(touch.clientX, touch.clientY)
+                  ?.closest<HTMLElement>("[data-slot-key]");
+                const key = el?.dataset.slotKey;
+                if (key) {
+                  onTouchSlotMove(key);
+                }
+              }
+        }
+      >
+        <table
+          style={tableMinWidthStyle}
+          className="w-full min-w-[var(--mobile-table-min-w)] md:min-w-[var(--desktop-table-min-w)] select-none border-collapse table-fixed"
+        >
+          <colgroup>
+            <col className="w-14 md:w-20" />
+            {session.days.map((day) => (
+              <col key={day.id} />
+            ))}
+          </colgroup>
+          <tbody>
+            {timeLabels.map((timeStr, idx) => {
+              const isFullHour = timeStr.endsWith(":00");
+              return (
+                <tr key={timeStr}>
+                  <td
+                    className={`sticky left-0 z-20 bg-[#121318] w-14 md:w-20 pr-1.5 md:pr-4 text-right align-top ${
+                      idx === 0 ? "translate-y-0" : "-translate-y-2"
+                    } text-xs md:text-sm text-white font-mono font-bold`}
+                  >
+                    {isFullHour ? timeStr : ""}
+                  </td>
+                  {session.days.map((day) => {
+                    const slotKey = makeSlotKey(day.date, timeStr);
+                    const count = heatmapCounts[slotKey] ?? 0;
+                    const isMine = mySlots.has(slotKey);
+                    const isFullMatch =
+                      count === totalParticipants && totalParticipants > 0;
+                    const isHighlightedUserHere = highlightedUserId
+                      ? Boolean(userSlotsMap[highlightedUserId]?.has(slotKey))
+                      : false;
+                    const highlightedColor = highlightedUserId
+                      ? assignedColors.get(highlightedUserId)
+                      : undefined;
+                    const isInspectedSlot = selectedSlot === slotKey;
+
+                    return (
+                      <ScheduleCell
+                        key={slotKey}
+                        slotKey={slotKey}
+                        dayDate={day.date}
+                        timeStr={timeStr}
+                        isFullHour={isFullHour}
+                        count={count}
+                        totalParticipants={totalParticipants}
+                        isMine={isMine}
+                        showOnlyMine={showOnlyMine}
+                        isFullMatch={isFullMatch}
+                        isHighlightedUserHere={isHighlightedUserHere}
+                        highlightedColor={highlightedColor}
+                        highlightedUserId={highlightedUserId}
+                        isInspectedSlot={isInspectedSlot}
+                        readOnly={readOnly}
+                        onMouseDown={onCellMouseDown}
+                        onMouseEnter={onCellMouseEnter}
+                        onMouseMove={onCellMouseMove}
+                        onKeyToggle={onCellKeyToggle}
+                      />
+                    );
+                  })}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 });

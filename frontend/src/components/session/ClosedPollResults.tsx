@@ -30,8 +30,8 @@ export function BestMatchesSection({
         <div>
           <h2 className="text-2xl font-semibold text-white">Best Matches</h2>
           <p className="text-sm text-white mt-1">
-            This poll is closed for voting. Below are the best matching time
-            windows ranked by participant availability.
+            This poll is closed for voting. Below are some of the best matching
+            time windows ranked by participant availability.
           </p>
         </div>
         {isCreator && (
