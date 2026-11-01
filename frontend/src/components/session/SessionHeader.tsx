@@ -103,9 +103,7 @@ export function SessionHeader({
   const optionsButtonRef = useRef<HTMLButtonElement>(null);
 
   const canShowPollOptionsMenu =
-    (!isClosed && hasChoices) ||
-    isCreator ||
-    (Boolean(currentUser) && isParticipant);
+    !isClosed || isCreator || (Boolean(currentUser) && isParticipant);
 
   useEffect(() => {
     if (!showOptionsMenu) return;
@@ -222,22 +220,26 @@ export function SessionHeader({
           </div>
         )}
 
-        {!isClosed && hasUnsavedChanges && (
+        {!isClosed && (
           <button
             type="button"
-            disabled={saving}
-            onClick={onSaveChoices}
-            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold bg-white hover:bg-white/90 text-black rounded-md transition-transform active:scale-95 cursor-pointer disabled:opacity-50"
+            disabled={!hasUnsavedChanges || saving}
+            onClick={hasUnsavedChanges ? onSaveChoices : undefined}
+            className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-md transition-all ${
+              hasUnsavedChanges
+                ? "bg-white hover:bg-white/90 text-black shadow-lg active:scale-95 cursor-pointer"
+                : "bg-white/5 border border-white/10 text-white/40 cursor-not-allowed opacity-50"
+            }`}
           >
             <CheckIcon className="w-4 h-4" />
-            <span>{saving ? "Saving..." : "Save my choices"}</span>
+            <span>
+              {saving
+                ? "Saving..."
+                : showSavedText && !hasUnsavedChanges
+                  ? "Saved"
+                  : "Save my choices"}
+            </span>
           </button>
-        )}
-
-        {showSavedText && !hasUnsavedChanges && (
-          <span className="text-sm font-medium text-white">
-            Successfully saved
-          </span>
         )}
 
         {canShowPollOptionsMenu && (
@@ -313,17 +315,25 @@ export function SessionHeader({
                   </button>
                 )}
 
-                {!isClosed && hasChoices && (
+                {!isClosed && (
                   <button
                     type="button"
                     role="menuitem"
-                    disabled={saving}
-                    onClick={() => {
-                      setShowOptionsMenu(false);
-                      setConfirmPollAction(null);
-                      onClearMine();
-                    }}
-                    className="w-full px-4 py-2.5 text-left text-sm font-medium text-white hover:bg-white/10 flex items-center gap-2 cursor-pointer"
+                    disabled={!hasChoices || saving}
+                    onClick={
+                      hasChoices
+                        ? () => {
+                            setShowOptionsMenu(false);
+                            setConfirmPollAction(null);
+                            onClearMine();
+                          }
+                        : undefined
+                    }
+                    className={`w-full px-4 py-2.5 text-left text-sm font-medium flex items-center gap-2 ${
+                      hasChoices
+                        ? "text-white hover:bg-white/10 cursor-pointer"
+                        : "text-white/40 cursor-not-allowed opacity-50"
+                    }`}
                   >
                     <TrashIcon className="w-4 h-4" />
                     <span>Delete my choices</span>
