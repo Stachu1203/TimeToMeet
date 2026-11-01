@@ -8,7 +8,7 @@ import {
   removeParticipant,
   saveAvailabilities,
 } from "../../api";
-import { slotsToAvailabilityPayloads } from "../../mockData";
+import { slotsToAvailabilityPayloads } from "../../Utils";
 import type {
   AvailabilityBlock,
   GroupSession,

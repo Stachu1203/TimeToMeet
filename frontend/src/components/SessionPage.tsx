@@ -5,7 +5,7 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { generateTimeLabels } from "../mockData";
+import { generateTimeLabels } from "../Utils";
 import type { GroupSession, PageName, User } from "../types";
 import { ChevronLeftIcon, ChevronRightIcon } from "./Icons";
 import { IdentityModal } from "./IdentityModal";

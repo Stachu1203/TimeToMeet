@@ -1,9 +1,5 @@
 import React from "react";
-import {
-  addMinutesToSlotKey,
-  formatShortDate,
-  makeSlotKey,
-} from "../../mockData";
+import { addMinutesToSlotKey, formatShortDate, makeSlotKey } from "../../Utils";
 import type { AvailabilityBlock, GroupSession, User } from "../../types";
 import { TrashIcon } from "../Icons";
 import { PARTICIPANT_PALETTE, formatBlockTimeRange } from "./sessionUtils";

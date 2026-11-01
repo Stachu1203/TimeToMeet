@@ -1,4 +1,4 @@
-import { availabilityBlockToSlotKeys, normalizeSlotKey } from "../../mockData";
+import { availabilityBlockToSlotKeys, normalizeSlotKey } from "../../Utils";
 import type { AvailabilityBlock, HeatmapResponse, User } from "../../types";
 
 export const PARTICIPANT_PALETTE = [

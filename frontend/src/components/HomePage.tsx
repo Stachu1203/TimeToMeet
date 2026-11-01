@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { formatCreationDate } from "../mockData";
+import { formatCreationDate } from "../Utils";
 import type { GroupSession, PageName, User } from "../types";
 import { ArrowRightIcon, CheckIcon, PlusIcon, TrashIcon } from "./Icons";
 
@@ -88,7 +88,8 @@ export function HomePage({
             Sign in to view your created and joined polls.
           </div>
           <p className="text-sm text-white">
-            If you have a direct link to a poll, open that link in your browser to vote as a guest or signed-in user.
+            If you have a direct link to a poll, open that link in your browser
+            to vote as a guest or signed-in user.
           </p>
           <button
             type="button"
@@ -104,7 +105,8 @@ export function HomePage({
         </div>
       ) : sortedSessions.length === 0 ? (
         <div className="p-8 rounded-md bg-[#181a20] border border-white/15 text-base text-white">
-          You have no polls yet. Create a new poll or join one via a shared link.
+          You have no polls yet. Create a new poll or join one via a shared
+          link.
         </div>
       ) : (
         <div className="space-y-4">
