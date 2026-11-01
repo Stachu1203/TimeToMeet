@@ -71,12 +71,12 @@ export function SessionPage({
     x: 0,
     y: 0,
   });
-  const [gridMode, setGridMode] = useState<"vote" | "inspect">("vote");
+  const [gridMode, setGridMode] = useState<"vote" | "inspect">("inspect");
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [highlightedUserId, setHighlightedUserId] = useState<string | null>(
     null,
   );
-  const [showIdentityModal, setShowIdentityModal] = useState(!currentUser);
+  const [showIdentityModal, setShowIdentityModal] = useState(false);
   const [pendingSlotKey, setPendingSlotKey] = useState<string | null>(null);
   const [pendingLocalAction, setPendingLocalAction] = useState<
     "back" | "inspect" | null
@@ -163,6 +163,7 @@ export function SessionPage({
       const next = new Set(mySlots);
       if (mode === "add") next.add(slotKey);
       else next.delete(slotKey);
+      setHighlightedUserId(null);
       setMySlots(next);
       setHasUnsavedChanges(true);
       setShowSavedText(false);
@@ -183,8 +184,12 @@ export function SessionPage({
 
   const handleCellMouseEnter = useCallback(
     (slotKey: string, e: React.MouseEvent) => {
-      setHoveredSlot(slotKey);
-      setMousePos({ x: e.clientX, y: e.clientY });
+      if (session.is_closed || gridMode === "inspect") {
+        setHoveredSlot(slotKey);
+        setMousePos({ x: e.clientX, y: e.clientY });
+      } else {
+        setHoveredSlot(null);
+      }
       if (
         session.is_closed ||
         gridMode === "inspect" ||
@@ -229,6 +234,7 @@ export function SessionPage({
       const next = new Set(mySlots);
       if (next.has(slotKey)) next.delete(slotKey);
       else next.add(slotKey);
+      setHighlightedUserId(null);
       setMySlots(next);
       setHasUnsavedChanges(true);
       setShowSavedText(false);
@@ -299,7 +305,11 @@ export function SessionPage({
       setShowIdentityModal(true);
       return false;
     }
-    return saveChoicesToServer();
+    const ok = await saveChoicesToServer();
+    if (ok) {
+      setGridMode("inspect");
+    }
+    return ok;
   };
 
   const handleRemoveParticipant = async (userId: string) => {
@@ -418,6 +428,11 @@ export function SessionPage({
         onSelectVoteMode={() => {
           setGridMode("vote");
           setSelectedSlot(null);
+          setHighlightedUserId(null);
+          setHoveredSlot(null);
+          if (!currentUser && !guestName) {
+            setShowIdentityModal(true);
+          }
         }}
         onSelectInspectMode={() => {
           if (gridMode !== "inspect" && hasUnsavedChanges) {
@@ -503,7 +518,7 @@ export function SessionPage({
           heatmapCounts={heatmapCounts}
           totalParticipants={totalParticipants}
           mySlots={mySlots}
-          isChoicesSaved={!hasUnsavedChanges}
+          showOnlyMine={!isClosed && gridMode === "vote"}
           readOnly={isClosed}
           userSlotsMap={userSlotsMap}
           highlightedUserId={highlightedUserId}
@@ -519,7 +534,7 @@ export function SessionPage({
         />
       </div>
 
-      {hoveredSlot && (
+      {(isClosed || gridMode === "inspect") && hoveredSlot && (
         <SlotHoverTooltip
           hoveredSlot={hoveredSlot}
           mousePos={mousePos}
@@ -554,7 +569,12 @@ export function SessionPage({
         creatorId={session.creator_id}
         currentUser={currentUser}
         saving={saving}
-        onSelectHighlightedUser={setHighlightedUserId}
+        onSelectHighlightedUser={(userId) => {
+          setHighlightedUserId(userId);
+          if (userId && gridMode === "vote" && !hasUnsavedChanges) {
+            setGridMode("inspect");
+          }
+        }}
         onRemoveParticipant={handleRemoveParticipant}
         onRemoveTimeWindow={handleRemoveTimeWindow}
       />

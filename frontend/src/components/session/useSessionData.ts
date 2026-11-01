@@ -203,6 +203,7 @@ export function useSessionData({
         activeVoterId,
         activeVoterName,
         mySlots,
+        !hasUnsavedChanges,
       ),
     [
       availabilities,
@@ -211,6 +212,7 @@ export function useSessionData({
       activeVoterId,
       activeVoterName,
       mySlots,
+      hasUnsavedChanges,
     ],
   );
 
@@ -228,6 +230,7 @@ export function useSessionData({
         serverVoterSlots,
         mySlots,
         slotParticipantsMap,
+        !hasUnsavedChanges,
       ),
     [
       heatmapData,
@@ -236,6 +239,7 @@ export function useSessionData({
       serverVoterSlots,
       mySlots,
       slotParticipantsMap,
+      hasUnsavedChanges,
     ],
   );
 
@@ -276,9 +280,9 @@ export function useSessionData({
           setGuestUserId(saved[0].user_id);
         }
       }
+      await loadSessionData(Boolean(currentUser));
       setHasUnsavedChanges(false);
       setShowSavedText(true);
-      await loadSessionData(Boolean(currentUser));
       onSessionUpdated?.();
       return true;
     } catch (err) {

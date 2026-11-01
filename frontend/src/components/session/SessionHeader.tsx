@@ -25,6 +25,53 @@ interface SessionHeaderProps {
   onDeleteSession: (sessionId: string) => void;
 }
 
+async function copyTextToClipboard(text: string): Promise<boolean> {
+  if (
+    typeof navigator !== "undefined" &&
+    navigator.clipboard &&
+    window.isSecureContext
+  ) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {
+      // fallback below
+    }
+  }
+
+  try {
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    textarea.style.position = "fixed";
+    textarea.style.top = "0";
+    textarea.style.left = "0";
+    textarea.style.width = "2em";
+    textarea.style.height = "2em";
+    textarea.style.padding = "0";
+    textarea.style.border = "none";
+    textarea.style.outline = "none";
+    textarea.style.boxShadow = "none";
+    textarea.style.background = "transparent";
+    textarea.setAttribute("readonly", "");
+    document.body.appendChild(textarea);
+    textarea.focus();
+    textarea.select();
+    textarea.setSelectionRange(0, text.length);
+    const successful = document.execCommand("copy");
+    document.body.removeChild(textarea);
+    if (successful) return true;
+  } catch {
+    // fallback below
+  }
+
+  if (typeof window !== "undefined" && window.prompt) {
+    window.prompt("Copy link:", text);
+    return true;
+  }
+
+  return false;
+}
+
 export function SessionHeader({
   session,
   currentUser,
@@ -83,15 +130,32 @@ export function SessionHeader({
     };
   }, [showOptionsMenu]);
 
-  const handleCopyShareLink = () => {
+  const copiedTimeoutRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (copiedTimeoutRef.current) {
+        window.clearTimeout(copiedTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const handleCopyShareLink = async () => {
     const shareUrl = `${window.location.origin}${window.location.pathname}?session=${session.id}`;
-    navigator.clipboard?.writeText(shareUrl).catch(() => {});
-    setCopiedLink(true);
-    setTimeout(() => setCopiedLink(false), 2000);
+    const success = await copyTextToClipboard(shareUrl);
+    if (success) {
+      if (copiedTimeoutRef.current) {
+        window.clearTimeout(copiedTimeoutRef.current);
+      }
+      setCopiedLink(true);
+      copiedTimeoutRef.current = window.setTimeout(() => {
+        setCopiedLink(false);
+      }, 2000);
+    }
   };
 
   return (
-    <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4 border-b border-white/15 pb-5">
+    <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4 border-b border-white/15 pb-5S">
       <div className="flex items-center gap-4 min-w-0 flex-1">
         <button
           type="button"
@@ -105,7 +169,7 @@ export function SessionHeader({
           <div className="flex items-center gap-3 min-w-0">
             <h1
               title={`Meeting: ${session.title}`}
-              className="text-2xl sm:text-3xl lg:text-4xl font-semibold tracking-tight text-white truncate max-w-full"
+              className="text-2xl sm:text-3xl lg:text-4xl font-semibold tracking-tight text-white truncate max-w-full h-full"
             >
               Meeting: {session.title}
             </h1>
@@ -132,22 +196,7 @@ export function SessionHeader({
 
       <div className="flex flex-wrap items-center gap-3 shrink-0">
         {!isClosed && (
-          <div
-            className={`${
-              isCreator ? "inline-flex" : "inline-flex md:hidden"
-            } rounded-md bg-[#181a20] border border-white/20 p-1`}
-          >
-            <button
-              type="button"
-              onClick={onSelectVoteMode}
-              className={`px-3 py-1.5 text-sm font-semibold rounded-sm transition-colors cursor-pointer ${
-                gridMode === "vote"
-                  ? "bg-white text-black"
-                  : "text-white hover:bg-white/10"
-              }`}
-            >
-              Vote
-            </button>
+          <div className="inline-flex rounded-md bg-[#181a20] border border-white/20 p-1">
             <button
               type="button"
               onClick={onSelectInspectMode}
@@ -158,6 +207,17 @@ export function SessionHeader({
               }`}
             >
               Inspect
+            </button>
+            <button
+              type="button"
+              onClick={onSelectVoteMode}
+              className={`px-3 py-1.5 text-sm font-semibold rounded-sm transition-colors cursor-pointer ${
+                gridMode === "vote"
+                  ? "bg-white text-black"
+                  : "text-white hover:bg-white/10"
+              }`}
+            >
+              Vote
             </button>
           </div>
         )}

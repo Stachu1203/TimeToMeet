@@ -5,7 +5,7 @@ import {
   makeSlotKey,
 } from "../../mockData";
 import type { AvailabilityBlock, GroupSession, User } from "../../types";
-import { CheckIcon, TrashIcon } from "../Icons";
+import { TrashIcon } from "../Icons";
 import { PARTICIPANT_PALETTE, formatBlockTimeRange } from "./sessionUtils";
 
 export interface ScheduleCellProps {
@@ -16,7 +16,7 @@ export interface ScheduleCellProps {
   count: number;
   totalParticipants: number;
   isMine: boolean;
-  isSaved: boolean;
+  showOnlyMine: boolean;
   isFullMatch: boolean;
   isHighlightedUserHere: boolean;
   highlightedColor: string | undefined;
@@ -37,7 +37,7 @@ export const ScheduleCell = React.memo(function ScheduleCell({
   count,
   totalParticipants,
   isMine,
-  isSaved,
+  showOnlyMine,
   isFullMatch,
   isHighlightedUserHere,
   highlightedColor,
@@ -54,6 +54,24 @@ export const ScheduleCell = React.memo(function ScheduleCell({
       ? Math.round((count / totalParticipants) * 100)
       : 0;
 
+  const barWidth = showOnlyMine
+    ? isMine
+      ? "100%"
+      : "0%"
+    : highlightedUserId
+      ? isHighlightedUserHere
+        ? "100%"
+        : "0%"
+      : `${fillPercent}%`;
+
+  const barColorClass = showOnlyMine
+    ? "bg-[#3b5278]"
+    : highlightedUserId
+      ? ""
+      : isFullMatch
+        ? "bg-[#3b5278]"
+        : "bg-white/15";
+
   return (
     <td
       className={`p-0 border border-white/10 ${
@@ -64,7 +82,11 @@ export const ScheduleCell = React.memo(function ScheduleCell({
         role={readOnly ? undefined : "button"}
         tabIndex={readOnly ? -1 : 0}
         data-slot-key={slotKey}
-        aria-label={`${dayDate} ${timeStr}, ${count} of ${totalParticipants} available`}
+        aria-label={
+          showOnlyMine
+            ? `${dayDate} ${timeStr}, ${isMine ? "selected" : "not selected"}`
+            : `${dayDate} ${timeStr}, ${count} of ${totalParticipants} available`
+        }
         onMouseDown={readOnly ? undefined : () => onMouseDown(slotKey)}
         onMouseEnter={(e) => onMouseEnter(slotKey, e)}
         onMouseMove={onMouseMove}
@@ -82,34 +104,15 @@ export const ScheduleCell = React.memo(function ScheduleCell({
           readOnly ? "cursor-default" : "cursor-pointer hover:bg-white/[0.04]"
         }`}
       >
-        {isMine && (
-          <span className="relative z-10 pointer-events-none flex items-center">
-            <CheckIcon
-              className={`w-4 h-4 sm:w-5 sm:h-5 ${
-                isSaved ? "text-[#4ade80]" : "text-white"
-              }`}
-            />
-          </span>
-        )}
         <div
           style={{
-            width: highlightedUserId
-              ? isHighlightedUserHere
-                ? "100%"
-                : "0%"
-              : `${fillPercent}%`,
+            width: barWidth,
             backgroundColor:
-              highlightedUserId && isHighlightedUserHere
+              !showOnlyMine && highlightedUserId && isHighlightedUserHere
                 ? highlightedColor
                 : undefined,
           }}
-          className={`absolute inset-y-0 left-0 transition-all duration-300 ease-out pointer-events-none ${
-            highlightedUserId
-              ? ""
-              : isFullMatch
-                ? "bg-[#3b5278]"
-                : "bg-white/15"
-          }`}
+          className={`absolute inset-y-0 left-0 transition-all duration-300 ease-out pointer-events-none ${barColorClass}`}
         />
         {isInspectedSlot && (
           <span className="pointer-events-none absolute inset-0 border-2 border-white z-20" />
@@ -125,7 +128,7 @@ export interface ScheduleTableProps {
   heatmapCounts: Record<string, number>;
   totalParticipants: number;
   mySlots: Set<string>;
-  isChoicesSaved: boolean;
+  showOnlyMine: boolean;
   readOnly?: boolean;
   userSlotsMap: Record<string, Set<string>>;
   highlightedUserId: string | null;
@@ -146,7 +149,7 @@ export const ScheduleTable = React.memo(function ScheduleTable({
   heatmapCounts,
   totalParticipants,
   mySlots,
-  isChoicesSaved,
+  showOnlyMine,
   readOnly = false,
   userSlotsMap,
   highlightedUserId,
@@ -251,7 +254,7 @@ export const ScheduleTable = React.memo(function ScheduleTable({
                       count={count}
                       totalParticipants={totalParticipants}
                       isMine={isMine}
-                      isSaved={isChoicesSaved}
+                      showOnlyMine={showOnlyMine}
                       isFullMatch={isFullMatch}
                       isHighlightedUserHere={isHighlightedUserHere}
                       highlightedColor={highlightedColor}

@@ -71,6 +71,7 @@ export function computeParticipantsAndSlots(
   activeVoterId: string | null,
   activeVoterName: string | null,
   mySlots: Set<string>,
+  includeLocalChoices = false,
 ) {
   const pMap = new Map<string, User>();
   const uSlots: Record<string, Set<string>> = {};
@@ -114,7 +115,7 @@ export function computeParticipantsAndSlots(
       ? new Set(uSlots[activeVoterId])
       : new Set<string>();
 
-  if (activeVoterId && activeVoterName) {
+  if (includeLocalChoices && activeVoterId && activeVoterName) {
     uSlots[activeVoterId] = new Set(mySlots);
     if (mySlots.size > 0 || pMap.has(activeVoterId)) {
       pMap.set(activeVoterId, { id: activeVoterId, name: activeVoterName });
@@ -150,6 +151,7 @@ export function computeHeatmapAndMatches(
   serverVoterSlots: Set<string>,
   mySlots: Set<string>,
   slotParticipantsMap: Record<string, User[]>,
+  includeLocalChoices = false,
 ) {
   const counts: Record<string, number> = {};
 
@@ -159,7 +161,7 @@ export function computeHeatmapAndMatches(
 
   let total = heatmapData.total_participants;
 
-  if (activeVoterId && activeVoterName) {
+  if (includeLocalChoices && activeVoterId && activeVoterName) {
     const hadServerSlots = serverVoterSlots.size > 0;
     const hasLocalSlots = mySlots.size > 0;
 
