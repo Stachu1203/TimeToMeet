@@ -66,7 +66,7 @@ export function BestMatchesSection({
               return (
                 <div
                   key={`${win.date}-${win.startTime}-${win.endTime}`}
-                  className={`p-5 rounded-md border space-y-4 ${
+                  className={`p-3 rounded-md border space-y-4 ${
                     isFullMatch
                       ? "bg-[#3b5278]/35 border-[#4a628a]"
                       : "bg-[#181a20] border-white/20"
@@ -137,7 +137,7 @@ export function MatchingDatesSection({
             return (
               <div
                 key={`${win.date}-${win.startTime}`}
-                className="p-4 rounded-md bg-[#181a20] border border-white/20 flex items-center justify-between"
+                className="p-2 rounded-md bg-[#181a20] border border-white/20 flex items-center justify-between"
               >
                 <span className="text-base font-semibold text-white">
                   {weekday}, {monthDay}
