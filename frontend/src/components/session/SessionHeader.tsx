@@ -155,7 +155,7 @@ export function SessionHeader({
   };
 
   return (
-    <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4 border-b border-white/15 pb-5S">
+    <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4 border-b border-white/15 pb-5">
       <div className="flex items-center gap-4 min-w-0 flex-1">
         <button
           type="button"
@@ -169,7 +169,7 @@ export function SessionHeader({
           <div className="flex items-center gap-3 min-w-0">
             <h1
               title={`Meeting: ${session.title}`}
-              className="text-2xl sm:text-3xl lg:text-4xl font-semibold tracking-tight text-white truncate max-w-full h-full"
+              className="text-2xl sm:text-3xl lg:text-4xl font-semibold leading-normal text-white truncate max-w-full -my-1 py-1 -ml-0.5 pl-0.5"
             >
               Meeting: {session.title}
             </h1>
