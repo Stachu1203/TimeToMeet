@@ -185,6 +185,6 @@ TimeToMeet/
 ## Wykorzystanie narzędzi AI
 
 Podczas prac nad projektem wspomagaliśmy się narzędziami AI (model **Argon** w środowisku **Antigravity** oraz **Gemini 3.8 Pro** w przeglądarce):
-- **Backend:** pisany samodzielnie, z wykorzystaniem AI głównie do konsultacji architektonicznych, code review oraz weryfikacji przypadków brzegowych.
-- **Frontend:** tworzony z umiarkowanym wsparciem powyższych narzędzi przy budowie komponentów interfejsu i stylowaniu widoków.
+- **Backend:** pisany w dużej mierze samodzielnie, z wykorzystaniem AI głównie do konsultacji architektonicznych, code review oraz weryfikacji przypadków brzegowych.
+- **Frontend:** tworzony z wsparciem powyższych narzędzi przy budowie komponentów interfejsu i stylowaniu widoków.
 
