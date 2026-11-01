@@ -54,6 +54,7 @@ export function useSessionData({
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [guestName, setGuestName] = useState<string | null>(null);
   const [guestUserId, setGuestUserId] = useState<string | null>(null);
+  const [initialLoaded, setInitialLoaded] = useState(false);
 
   const loadSessionData = useCallback(
     async (syncMySlots = false): Promise<GroupSession | null> => {
@@ -107,6 +108,10 @@ export function useSessionData({
           setStatusMessage(
             err instanceof Error ? err.message : "Failed to load poll data.",
           );
+        }
+      } finally {
+        if (!cancelled) {
+          setInitialLoaded(true);
         }
       }
     }
@@ -371,6 +376,7 @@ export function useSessionData({
   };
 
   return {
+    initialLoaded,
     mySlots,
     setMySlots,
     hasUnsavedChanges,

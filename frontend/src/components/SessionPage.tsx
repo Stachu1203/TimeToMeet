@@ -71,7 +71,9 @@ export function SessionPage({
     x: 0,
     y: 0,
   });
-  const [gridMode, setGridMode] = useState<"vote" | "inspect">("inspect");
+  const [userGridMode, setUserGridMode] = useState<"vote" | "inspect" | null>(
+    null,
+  );
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [highlightedUserId, setHighlightedUserId] = useState<string | null>(
     null,
@@ -84,6 +86,7 @@ export function SessionPage({
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const {
+    initialLoaded,
     mySlots,
     setMySlots,
     hasUnsavedChanges,
@@ -110,7 +113,7 @@ export function SessionPage({
     assignedColors,
     handleSaveChoices: saveChoicesToServer,
     handleToggleClose,
-    handleClearMine,
+    handleClearMine: clearMineFromServer,
     handleRemoveParticipant: removeParticipantFromServer,
     handleRemoveTimeWindow,
   } = useSessionData({
@@ -122,6 +125,26 @@ export function SessionPage({
     onSessionUpdated,
     onUnsavedChangesChange,
   });
+
+  const gridMode: "vote" | "inspect" = useMemo(() => {
+    if (session.is_closed) return "inspect";
+    if (userGridMode !== null) return userGridMode;
+    if (currentUser && !initialLoaded) return "inspect";
+    return serverVoterSlots.size === 0 ? "vote" : "inspect";
+  }, [
+    session.is_closed,
+    userGridMode,
+    currentUser,
+    initialLoaded,
+    serverVoterSlots.size,
+  ]);
+
+  const handleClearMine = async () => {
+    await clearMineFromServer();
+    if (!session.is_closed) {
+      setUserGridMode("vote");
+    }
+  };
 
   useEffect(() => {
     const handlePointerEnd = () => setIsDragging(false);
@@ -307,7 +330,7 @@ export function SessionPage({
     }
     const ok = await saveChoicesToServer();
     if (ok) {
-      setGridMode("inspect");
+      setUserGridMode("inspect");
     }
     return ok;
   };
@@ -360,7 +383,7 @@ export function SessionPage({
     }
     if (pendingLocalAction === "inspect") {
       setPendingLocalAction(null);
-      setGridMode("inspect");
+      setUserGridMode("inspect");
     }
   };
 
@@ -426,7 +449,7 @@ export function SessionPage({
         }}
         onChangeGuestName={() => setShowIdentityModal(true)}
         onSelectVoteMode={() => {
-          setGridMode("vote");
+          setUserGridMode("vote");
           setSelectedSlot(null);
           setHighlightedUserId(null);
           setHoveredSlot(null);
@@ -438,7 +461,7 @@ export function SessionPage({
           if (gridMode !== "inspect" && hasUnsavedChanges) {
             setPendingLocalAction("inspect");
           } else {
-            setGridMode("inspect");
+            setUserGridMode("inspect");
           }
         }}
         onSaveChoices={handleSaveChoices}
@@ -572,7 +595,7 @@ export function SessionPage({
         onSelectHighlightedUser={(userId) => {
           setHighlightedUserId(userId);
           if (userId && gridMode === "vote" && !hasUnsavedChanges) {
-            setGridMode("inspect");
+            setUserGridMode("inspect");
           }
         }}
         onRemoveParticipant={handleRemoveParticipant}
