@@ -31,20 +31,20 @@ class GroupCreate(BaseModel):
         try:
             zoneinfo.ZoneInfo(v)
         except zoneinfo.ZoneInfoNotFoundError:
-            raise ValueError('Podano nieistniejącą strefe czasową')
+            raise ValueError('A non-existent time zone was specified')
         return v
     @field_validator('days')
     @classmethod
     def check_days(cls, v: list[date]):
         if not v:
-            raise ValueError('Musisz podać przynajmniej jeden dzień dla grupy')
+            raise ValueError('You must provide at least one day for the group')
         
         return list(dict.fromkeys(v))
     
     @model_validator(mode='after')
     def check_hours(self):
         if self.grid_start_hour >= self.grid_end_hour:
-            raise ValueError('Godzina rozpoczęcia siatki musi być wcześniejsza niż godzina zakończenia')
+            raise ValueError('The grid start time must be earlier than the end time')
         return self
 
 class GroupDayResponse(BaseModel):
@@ -120,14 +120,14 @@ class GroupUpdate(BaseModel):
             try:
                 zoneinfo.ZoneInfo(v)
             except zoneinfo.ZoneInfoNotFoundError:
-                raise ValueError('Podano nieistniejącą strefe czasową')
+                raise ValueError('Non-existent time zone specified')
         return v
     @field_validator('days')
     @classmethod
     def check_days(cls, v: Optional[list[date]]):
         if v is not None:
             if not v:
-                raise ValueError('Musisz podać przynajmniej jeden dzień dla grupy')
+                raise ValueError('You must provide at least one day for the group')
             return list(dict.fromkeys(v))
         return v
 

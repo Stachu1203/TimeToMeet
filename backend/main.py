@@ -63,13 +63,13 @@ def create_availability(availabilities: list[schemas.AvailabilityCreate],group_i
 
     group = db.query(models.Group).filter(models.Group.id == group_id).first()
     if not group:
-        raise HTTPException(status_code=404, detail="Grupa nie istnieje")
+        raise HTTPException(status_code=404, detail="Group does not exist")
 
     if group.is_closed:
-        raise HTTPException(status_code=400, detail="Ankieta jest zamknięta")
+        raise HTTPException(status_code=400, detail="The survey is closed")
 
     if not availabilities:
-        raise HTTPException(status_code=400, detail="Lista dostępności nie może być pusta")
+        raise HTTPException(status_code=400, detail="The availability list cannot be empty")
 
     allowed_dates = {day.date for day in group.days}
 
@@ -83,7 +83,7 @@ def create_availability(availabilities: list[schemas.AvailabilityCreate],group_i
     else:
         guest_name = availabilities[0].voter_name
         if not guest_name or not guest_name.strip():
-            raise HTTPException(status_code=400, detail="Goście muszą podać imię (voter_name)")
+            raise HTTPException(status_code=400, detail="Guests must provide a name (voter_name)")
         existing_guest_id = availabilities[0].user_id
         guest_user = None
         if existing_guest_id:
@@ -108,19 +108,19 @@ def create_availability(availabilities: list[schemas.AvailabilityCreate],group_i
 
     for av in availabilities:
         if av.start_time >= av.end_time:
-            raise HTTPException(status_code=400, detail="Czas rozpoczęcia musi być przed czasem zakończenia")
+            raise HTTPException(status_code=400, detail="Start time must be before end time")
 
         if av.start_time.date() != av.end_time.date():
-            raise HTTPException(status_code=400, detail="Przedział dostępności musi mieścić się w jednym dniu")
+            raise HTTPException(status_code=400, detail="The availability window must be within one day")
         if av.start_time.date() not in allowed_dates:
-            raise HTTPException(status_code=400, detail="Wybrana data nie należy do dni tej grupy")
+            raise HTTPException(status_code=400, detail="The selected date does not belong to this group")
         start_time_only = av.start_time.time()
         end_time_only = av.end_time.time()
 
         if start_time_only < group.grid_start_hour or end_time_only > group.grid_end_hour:
             raise HTTPException(
                 status_code=400, 
-                detail=f"Dostępność wykracza poza ramy czasowe grupy ({group.grid_start_hour} - {group.grid_end_hour})"
+                detail=f"Availability extends beyond group timeframes ({group.grid_start_hour} - {group.grid_end_hour})"
             )
 
 
@@ -147,7 +147,7 @@ def get_heatmap(group_id: UUID, db: Session = Depends(get_db)):
 
     group = db.query(models.Group).filter(models.Group.id == group_id).first()
     if not group:
-        raise HTTPException(status_code=404, detail="Grupa nie istnieje")
+        raise HTTPException(status_code=404, detail="The group does not exist")
     availabilities = db.query(models.Availability).filter(models.Availability.group_id == group_id).all()
 
     total_participants = db.query(models.Availability.user_id).filter(
@@ -234,7 +234,7 @@ def get_my_groups(db: Session = Depends(get_db), current_user: models.User = Dep
 def get_group(group_id: UUID, db: Session = Depends(get_db)):
     group = db.query(models.Group).filter(models.Group.id == group_id).first()
     if not group:
-        raise HTTPException(status_code=404, detail="Grupa nie istnieje")
+        raise HTTPException(status_code=404, detail="Group does not exist")
     
     return group
     
@@ -253,7 +253,7 @@ def get_my_availabilities(
 ):
     group = db.query(models.Group).filter(models.Group.id == group_id).first()
     if not group:
-        raise HTTPException(status_code=404, detail="Grupa nie istnieje")
+        raise HTTPException(status_code=404, detail="Group does not exist")
 
     return db.query(models.Availability).filter(
         models.Availability.group_id == group_id,
@@ -270,11 +270,11 @@ def delete_my_availabilities(
 ):
     group = db.query(models.Group).filter(models.Group.id == group_id).first()
     if not group:
-        raise HTTPException(status_code=404, detail="Grupa nie istnieje")
+        raise HTTPException(status_code=404, detail="Group does not exist")
 
     target_user_id = current_user.id if current_user else guest_user_id
     if not target_user_id:
-        raise HTTPException(status_code=401, detail="Brak autoryzacji")
+        raise HTTPException(status_code=401, detail="No authorization")
 
     db.query(models.Availability).filter(
         models.Availability.group_id == group_id,
@@ -293,10 +293,10 @@ def update_group(
 ):
     group = db.query(models.Group).filter(models.Group.id == group_id).first()
     if not group:
-        raise HTTPException(status_code=404, detail="Grupa nie istnieje")
+        raise HTTPException(status_code=404, detail="The group does not exist")
 
     if group.creator_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Brak uprawnień do edycji tej grupy")
+        raise HTTPException(status_code=403, detail="You do not have permission to edit this group.")
 
     update_data = group_update.model_dump(exclude_unset=True)
     new_days = update_data.pop("days", None)
@@ -304,7 +304,7 @@ def update_group(
     new_start = update_data.get("grid_start_hour", group.grid_start_hour)
     new_end = update_data.get("grid_end_hour", group.grid_end_hour)
     if new_start >= new_end:
-        raise HTTPException(status_code=400, detail="Godzina rozpoczęcia siatki musi być wcześniejsza niż godzina zakończenia")
+        raise HTTPException(status_code=400, detail="The grid start time must be earlier than the end time")
 
     for key, value in update_data.items():
         setattr(group, key, value)
@@ -327,10 +327,10 @@ def delete_group(
 ):
     group = db.query(models.Group).filter(models.Group.id == group_id).first()
     if not group:
-        raise HTTPException(status_code=404, detail="Grupa nie istnieje")
+        raise HTTPException(status_code=404, detail="Group does not exist")
 
     if group.creator_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Brak uprawnień do usunięcia tej grupy")
+        raise HTTPException(status_code=403, detail="You do not have permission to delete this group.")
 
     db.delete(group)
     db.commit()
@@ -339,7 +339,7 @@ def delete_group(
 def get_group_availabilities(group_id: UUID, db: Session = Depends(get_db)):
     group = db.query(models.Group).filter(models.Group.id == group_id).first()
     if not group:
-        raise HTTPException(status_code=404, detail="Grupa nie istnieje")
+        raise HTTPException(status_code=404, detail="Group does not exist")
 
     return db.query(models.Availability).filter(
         models.Availability.group_id == group_id
@@ -355,10 +355,10 @@ def remove_participant(
 ):
     group = db.query(models.Group).filter(models.Group.id == group_id).first()
     if not group:
-        raise HTTPException(status_code=404, detail="Grupa nie istnieje")
+        raise HTTPException(status_code=404, detail="Group does not exist")
 
     if group.creator_id != current_user.id and user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Brak uprawnień do usunięcia uczestnika")
+        raise HTTPException(status_code=403, detail="No permission to remove participant")
 
     db.query(models.Availability).filter(
         models.Availability.group_id == group_id,
@@ -376,17 +376,17 @@ def delete_availability_window(
 ):
     group = db.query(models.Group).filter(models.Group.id == group_id).first()
     if not group:
-        raise HTTPException(status_code=404, detail="Grupa nie istnieje")
+        raise HTTPException(status_code=404, detail="Group does not exist")
 
     av = db.query(models.Availability).filter(
         models.Availability.id == availability_id,
         models.Availability.group_id == group_id
     ).first()
     if not av:
-        raise HTTPException(status_code=404, detail="Przedział czasowy nie istnieje")
+        raise HTTPException(status_code=404, detail="The time period does not exist")
 
     if group.creator_id != current_user.id and av.user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Brak uprawnień do usunięcia przedziału czasowego")
+        raise HTTPException(status_code=403, detail="No permission to delete time slot")
 
     db.delete(av)
     db.commit()
